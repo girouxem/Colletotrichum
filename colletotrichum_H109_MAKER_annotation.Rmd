@@ -76,29 +76,6 @@ put there:
 referencesPath   <- paste(sharedPath, "References/", sep = "")
 ```
 
-Set paths to Maker and GAG scripts:
-```{r}
-# Path of where I'm saving scripts:
-scriptsPath <- "/home/CFIA-ACIA/girouxeml/prog/scripts_pl/"
-
-# Maker Scripts:
-makerMapPath <- paste(scriptsPath, "maker_map_ids.pl", sep = "")
-makerMapGffPath <- paste(scriptsPath, "map_gff_ids.pl", sep = "")
-makerFuncGffPath <- paste(scriptsPath, "maker_functional_gff.pl", sep = "")
-makerIPRupdatePath <- paste(scriptsPath, "ipr_update_gff.pl", sep = "")
-makerDatMapPath <- paste(scriptsPath, "map_data_ids.pl", sep = "")
-makerMapFastaPath <- paste(scriptsPath, "map_fasta_ids.pl", sep = "")
-
-# GAG scripts: 
-gagPath <- "/home/CFIA-ACIA/girouxeml/prog/gag/genomeannotation-GAG-40ea515/gag.py"
-
-# Annie Scripts:
-anniePath <- paste("/home/CFIA-ACIA/girouxeml/prog/annie/genomeannotation-annie/annie.py")
-
-uniProtDBPath <- "/home/CFIA-ACIA/girouxeml/Databases/uniprot/uniprot_sprot.fasta"
-getAnnoFastaPath <- paste(scriptsPath, "getAnnoFasta.pl", sep = "")
-
-```
 
 ```{r analysis_and_sequence_directory, cache=TRUE}
 seqDataDir <- "IonTorrent_data_2017"
@@ -106,18 +83,6 @@ seqDataDir <- "IonTorrent_data_2017"
 
 
 #######################################################################################################################
-
-
-
-
-
-
-
-
-
-
-
-
 ```{r analysis_and_sequence_directory, cache=TRUE}
 # Set the path for where I've been putting the NCBI sumission files:
 lsueNCBIfilesPath <- paste(sharedPathAn, "Lachnellula_suecica/Lsue_NCBI_files/Lsue_NCBI/", sep = "")
