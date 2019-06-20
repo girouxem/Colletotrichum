@@ -24,12 +24,12 @@ parseFastaByHeaderPattern <- function(infile, identity, node = 1){
               use Bio::SeqIO;
               
               my $seqIOin  = Bio::SeqIO->new(-format => 'fasta', -file => \"<",infile,"\");
-              my $seqIOout = Bio::SeqIO->new(-format => 'fasta', -file => \">Known_",infile,"\");
+              my $seqIOout = Bio::SeqIO->new(-format => 'fasta', -file => \">Known_consensi.fa.classified","\");
               
               while (my $seq = $seqIOin->next_seq){
                     $seqIOout->write_seq($seq) if !($seq->id =~ /Unknown/);
               }", sep = ""),
-        file=paste(outpath, "Known.pl", sep=""))
+        file=paste(outpath, "Known.pl", sep="/"))
     cat(c("\n"," *** SUBMIT FOLLOWING TWO COMMANDS FROM HEADNODE ***","\n",
           "    1- Ensure working directory given for outputs:", "\n",
           paste("cd", outpath), "\n",
@@ -43,12 +43,12 @@ parseFastaByHeaderPattern <- function(infile, identity, node = 1){
               use Bio::SeqIO;
               
               my $seqIOin  = Bio::SeqIO->new(-format => 'fasta', -file => \"<",infile,"\");
-              my $seqIOout = Bio::SeqIO->new(-format => 'fasta', -file => \">Unknown_",infile,"\");
+              my $seqIOout = Bio::SeqIO->new(-format => 'fasta', -file => \">Unknown_consensi.fa.classified","\");
               
               while (my $seq = $seqIOin->next_seq){
                     $seqIOout->write_seq($seq) if ($seq->id =~ /Unknown/);
               }", sep = ""),
-            file=paste(outpath, "Unknown.pl", sep=""))
+            file=paste(outpath, "Unknown.pl", sep="/"))
         cat(c("\n"," *** SUBMIT FOLLOWING TWO COMMANDS FROM HEADNODE ***","\n",
               "    1- Ensure working directory given for outputs:", "\n",
               paste("cd", outpath), "\n",

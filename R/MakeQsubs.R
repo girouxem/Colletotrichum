@@ -4,10 +4,10 @@
 # Linux command needs to be done on several data files)
 
 MakeQsubs <- function(cmd, prefix, suffix = ".sub", node =1) {
-  dir.create(paste(sharedPathAn, prefix, sep = ""), 
+  dir.create(paste(sharedPathAn, prefix, sep = "/"), 
              showWarnings = TRUE, 
              recursive = FALSE)
-  outPath <- paste(sharedPathAn, prefix, "/", sep="")
+  outPath <- paste(sharedPathAn, "/", prefix, "/", sep="")
   for(k in 1:length(cmd)) {
     cat(paste("#!/bin/bash \n",
               "#$ -S /bin/bash
