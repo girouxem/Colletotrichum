@@ -34,29 +34,29 @@ proCorc <- paste(altColletoRefs, "GCA_001831195.1_CORC01_protein.faa", sep = "/"
 estCglo <- paste(colletoRefs, "alternateOrgRefs/cgloesporioidesTranscriptomics/GSE41844_Cg_transcripts.fasta", sep = "/")
 gtfCglo <- paste(colletoRefs, "alternateOrgRefs/cgloesporioidesTranscriptomics/GSE41844_cuffcmp.combined.gtf", sep = "/")
 
-augConfPath <- "/isilon/cfia-ottawa-fallowfield/users/girouxeml/prog/augustus/config"
-augConfSppPath <- "/isilon/cfia-ottawa-fallowfield/users/girouxeml/prog/augustus/config/species"
+augConfPath <- "/home/CFIA-ACIA/girouxeml/prog/augustus/config"
+augConfSppPath <- "/home/CFIA-ACIA/girouxeml/prog/augustus/config/species"
 
 #-----Location of Executables Used by MAKER/EVALUATOR
-# makeblastdb=/home/CFIA-ACIA/girouxeml/prog/miniconda/envs/makerenv/bin/makeblastdb #location of NCBI+ makeblastdb executable
-# blastn=/home/CFIA-ACIA/girouxeml/prog/miniconda/envs/makerenv/bin/blastn #location of NCBI+ blastn executable
-# blastx=/home/CFIA-ACIA/girouxeml/prog/miniconda/envs/makerenv/bin/blastx #location of NCBI+ blastx executable
-# tblastx=/home/CFIA-ACIA/girouxeml/prog/miniconda/envs/makerenv/bin/tblastx #location of NCBI+ tblastx executable
+# makeblastdb=/home/CFIA-ACIA/girouxeml/prog/anaconda3/envs/makerenv/bin/makeblastdb #location of NCBI+ makeblastdb executable
+# blastn=/home/CFIA-ACIA/girouxeml/prog/anaconda3/envs/bio/bin/blastn #location of NCBI+ blastn executable
+# blastx=/home/CFIA-ACIA/girouxeml/prog/anaconda3/envs/makerenv/bin/blastx #location of NCBI+ blastx executable
+# tblastx=/home/CFIA-ACIA/girouxeml/prog/anaconda3/envs/makerenv/bin/tblastx #location of NCBI+ tblastx executable
 # formatdb=/opt/bio/ncbi/bin/formatdb #location of NCBI formatdb executable
 # blastall=/opt/bio/ncbi/bin/blastall #location of NCBI blastall executable
 # xdformat= #location of WUBLAST xdformat executable
-#   blasta= #location of WUBLAST blasta executable
-#   RepeatMasker=/home/CFIA-ACIA/girouxeml/prog/miniconda/envs/makerenv/share/RepeatMasker/RepeatMasker #location of RepeatMasker executable
-# exonerate=/home/CFIA-ACIA/girouxeml/prog/miniconda/envs/makerenv/bin/exonerate #location of exonerate executable
+# blasta= #location of WUBLAST blasta executable
+# RepeatMasker=/home/CFIA-ACIA/girouxeml/prog/anaconda3/envs/makerenv/share/RepeatMasker/RepeatMasker #location of RepeatMasker executable
+# exonerate=/home/CFIA-ACIA/girouxeml/prog/anaconda3/envs/makerenv/bin/exonerate #location of exonerate executable
 # 
 # #-----Ab-initio Gene Prediction Algorithms
-# snap=/home/CFIA-ACIA/girouxeml/prog/miniconda/envs/makerenv/bin/snap #location of snap executable
+# snap=/home/CFIA-ACIA/girouxeml/prog/anaconda3/envs/makerenv/bin/snap #location of snap executable
 # gmhmme3=/home/CFIA-ACIA/girouxeml/prog/genemark-es/gmhmme3 #location of eukaryotic genemark executable
 # gmhmmp= #location of prokaryotic genemark executable
-#   augustus=/home/CFIA-ACIA/girouxeml/prog/miniconda/pkgs/augustus-3.2.3-boost1.57_0/bin/augustus #location of augustus executable
+# augustus=/home/CFIA-ACIA/girouxeml/prog/anaconda3/envs/makerenv/bin/augustus #location of augustus executable
 # fgenesh= #location of fgenesh executable
-#   tRNAscan-SE=/home/CFIA-ACIA/girouxeml/prog/tRNAscan-SE/bin/tRNAscan-SE #location of trnascan executable
-# snoscan=/home/CFIA-ACIA/girouxeml/prog/miniconda/envs/makerenv/bin/snoscan #location of snoscan executable
+# tRNAscan-SE=/home/CFIA-ACIA/girouxeml/prog/tRNAscan-SE/bin/tRNAscan-SE #location of trnascan executable
+# snoscan=/home/CFIA-ACIA/girouxeml/prog/anaconda3/envs/makerenv/bin/snoscan #location of snoscan executable
 # 
 # #-----Other Algorithms
 # probuild=/home/CFIA-ACIA/girouxeml/prog/genemark-es/probuild #location of probuild executable (required for genemark)

@@ -1,21 +1,25 @@
 # Path of scripts and programs:
-scriptsPath <- "/home/CFIA-ACIA/girouxeml/prog/scripts_pl/"
 progPath        <- "/home/CFIA-ACIA/girouxeml/prog"
+scriptsPath     <- paste(progPath, "scripts_pl", sep = "/")
+
 # Annie:
-anniePath <- paste("/home/CFIA-ACIA/girouxeml/prog/annie/genomeannotation-annie/annie.py")
+anniePath       <- paste(progPath, "annie/genomeannotation-annie/annie.py", sep = "/")
+
+# Bio conda env:
+bioEnvPath      <- paste(progPath, "anaconda3/envs/bio", sep = "/")
 # BedTools: 
-bedtoolsPath    <- paste(progPath, "miniconda/bin/bedtools", sep = "/")
+bedtoolsPath    <- paste(bioEnvPath, "bin/bedtools", sep = "/")
 # BLAST:
-# blastallPath    <- "/opt/bio/ncbi/bin/blastall"
-blastpPath      <- paste(progPath, "miniconda/bin/blastp", sep = "/")
+blastpPath      <- paste(bioEnvPath, "bin/blastp", sep = "/")
+
 # BUSCO:
-buscoPath       <- paste(progPath, "busco/scripts/run_BUSCO.py", sep = "/")
+buscoPath       <- paste(makerEnvPath, "bin/BUSCO.py", sep = "/")
 # Fathom:
-fathomPath      <- paste(progPath, "snap/fathom", sep = "/")
+fathomPath      <- paste(makerEnvPath, "bin/fathom", sep = "/")
 # Forge:
-forgePath       <- paste(progPath, "snap/forge", sep = "/")
+forgePath       <- paste(makerEnvPath, "bin/forge", sep = "/")
 # GAG (Genome Annotation Generator): 
-gagPath <- "/home/CFIA-ACIA/girouxeml/prog/gag/genomeannotation-GAG-40ea515/gag.py"
+gagPath <- paste(progPath, "gag/genomeannotation-GAG-40ea515/gag.py", sep = "/")
 # Genemark-es:
 genemarkPath    <- paste(progPath, "genemark-es/gmes_petap.pl", sep = "/")
 gmhmmer3Path    <- paste(progPath, "genemark-es/gmhmme3", sep = "/")
@@ -24,6 +28,7 @@ probuildPath    <- paste(progPath, "genemark-es/probuild", sep = "/")
 # InterProScan:
 interproPath    <- paste(progPath, "my_interproscan/interproscan-5.24-63.0/interproscan.sh", sep = "/")
 # MAKER:
+makerEnvPath <- paste(progPath, "anaconda3/envs/makerenv", sep = "/")
 # AED:
 aedCDFgenePath  <- paste(makerEnvPath, "bin/AED_cdf_generator.pl", sep = "/")
 # Augustus:
@@ -36,7 +41,8 @@ blastnPath      <- paste(makerEnvPath, "bin/blastn", sep = "/")
 tblastxPath     <- paste(makerEnvPath, "bin/tblastx", sep = "/")
 exoneratePath   <- paste(makerEnvPath, "bin/exonerate", sep = "/")
 snoscanPath     <- paste(makerEnvPath, "bin/snoscan", sep = "/")
-makerEnvPath <- paste(progPath, "miniconda/envs/makerenv", sep = "/")
+# tbl2asn:
+tbl2asnPath     <- paste(makerEnvPath, "bin/tbl2asn", sep = "")
 makerDatMapPath <- paste(makerEnvPath, "bin/map_data_ids", sep = "/")
 makerFastamerge <- paste(makerEnvPath, "bin/fasta_merge", sep = "/") 
 makerFuncFasta  <- paste(makerEnvPath, "bin/maker_functional_fasta", sep = "/") 
@@ -49,8 +55,8 @@ makerMapGffPath <- paste(makerEnvPath, "bin/map_gff_ids", sep = "/")
 makerMapPath    <- paste(makerEnvPath, "bin/maker_map_ids", sep = "/")
 makerPath       <- paste(makerEnvPath, "bin/maker", sep = "/") 
 maker2zffPath   <- paste(makerEnvPath, "bin/maker2zff", sep = "/") 
-
-repeatEnvPath <- paste(progPath, "miniconda/envs/repeatsAnnotation", sep = "/")
+gtPath          <-paste(makerEnvPath, "bin/gt", sep = "/") # Genometools
+repeatEnvPath <- paste(progPath, "anaconda3/envs/repeatsAnnotation", sep = "/")
 blastxPath  <- paste(repeatEnvPath, "bin/blastx", sep = "/")
 makeBlastDB <- paste(repeatEnvPath, "bin/makeblastdb", sep = "/")
 tblastnPath <- paste(repeatEnvPath, "bin/tblastn", sep = "/")
@@ -65,14 +71,12 @@ repModBuildDBPath  <- paste(repeatEnvPath, "bin/BuildDatabase", sep = "/")
 repModlerPath   <- paste(repeatEnvPath, "bin/RepeatModeler", sep = "/")
 
 # SNAP:
-hmmAssemPath    <- paste(progPath, "snap/hmm-assembler.pl", sep = "")
-snapPath        <- paste(progPath, "snap/snap", sep = "/")
+hmmAssemPath    <- paste(makerEnvPath, "bin/hmm-assembler.pl", sep = "")
+snapPath        <- paste(makerEnvPath, "bin/snap", sep = "/")
 
-# tbl2asn:
-tbl2asnPath     <- paste(progPath, "linux64.tbl2asn", sep = "")
 # tRNA-scan:
 pathtRNA_scan   <- paste(makerEnvPath, "bin/tRNAscan-SE", sep = "/")
-pathtRNAscan131 <- "/home/CFIA-ACIA/girouxeml/prog/tRNAscan-SE-1.3.1/tRNAscan-SE" # Maker only works with v 1.3.1, not v 2.0 of tRNAscan-SE
+pathtRNAscan131 <- paste(progPath, "tRNAscan-SE-1.3.1/tRNAscan-SE", sep = "/") # Maker only works with v 1.3.1, not v 2.0 of tRNAscan-SE
 
 # Extra scripts:
 fixGAGNamePath   <- paste(scriptsPath, "fix_GAG_Name.sh", sep = "")
@@ -80,6 +84,6 @@ getAnnoFastaPath <- paste(scriptsPath, "getAnnoFasta.pl", sep = "")
 zff2augGbkPath   <- paste(scriptsPath, "zff2augustus_gbk.pl", sep = "")
 
 # Databases:
-emblDBRepMasker <- "/home/CFIA-ACIA/girouxeml/prog/miniconda/envs/repeatsAnnotation/RepeatMasker/Libraries/RepeatMaskerLib.embl"
+emblDBRepMasker <- paste(repeatEnvPath, "RepeatMasker/Libraries/RepeatMaskerLib.embl", sep = "/")
 uniProtDBPath <- "/home/CFIA-ACIA/girouxeml/Databases/uniprot/uniprot_sprot.fasta"
-buscoDataSets <- "/isilon/cfia-ottawa-fallowfield/users/girouxeml/prog/busco_datasets"
+buscoDataSets <- paste(progPath, "busco_datasets", sep = "/")
