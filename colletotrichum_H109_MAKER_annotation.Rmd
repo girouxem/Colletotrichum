@@ -57,10 +57,10 @@ scripts  <- dir(root$find_file("R", path = root$find_file()))
 scriptsl <- paste(scriptsPath, scripts, sep = "//")
 lapply(scriptsl, source)
 # Record the path to the environment images directory:
-sharedPath <- "/isilon/cfia-ottawa-fallowfield/users/girouxeml/PIRL_working_directory"
+sharedPath <- "/home/CFIA-ACIA/girouxeml/PIRL_working_directory"
 analysis   <- "colletotrichum_H109_annotation"
 sharedPathAn <- paste(sharedPath, analysis, sep = "/")
-imageDirPath <- "/isilon/cfia-ottawa-fallowfield/users/girouxeml/GitHub_Repos/r_environments/colletotrichum_H109_annotation/"
+imageDirPath <- "/home/CFIA-ACIA/girouxeml/GitHub_Repos/r_environments/colletotrichum_H109_annotation/"
 baseImage    <- "colletotrichum_H109_annotation_June2019.RData"
 
 load(paste(imageDirPath, baseImage, sep = ""))
@@ -68,7 +68,7 @@ save.image(paste(imageDirPath, baseImage, sep = ""))
 ```
 
 Note: Annotation begins with using RepeatModeler and then RepeatMasker to model and mask repetitive content. A problem with the installation is preventing successfull modelling. Solution is to create a conda environment for RepeatModeler.     
-$ /home/CFIA-ACIA/girouxeml/prog/miniconda/envs/repeats/bin     
+$ /home/CFIA-ACIA/girouxeml/prog/anaconda3/envs/repeats/bin     
      
 **Read in the metadata table:**  
 We need to specify where we put the assembly files for our genomes. We had this in our metadataAssembly table 
@@ -76,7 +76,7 @@ from our previous script we ran called "RstudioScript-June2017_LachnellulaSpp_as
 We can either read in the table, or take what we have from the environment. Reading in the table is better.
 ```{r}
 library(data.table)
-colletotrichumAssemblyDir <- "/isilon/cfia-ottawa-fallowfield/users/girouxeml/PIRL_working_directory/colletotrichum"
+colletotrichumAssemblyDir <- "/home/CFIA-ACIA/girouxeml/PIRL_working_directory/colletotrichum"
 metadataFile <- "colleto_ionT_2018_1_metadata_Assembly_Oct2018.csv"
 
 metadata <- fread(paste(colletotrichumAssemblyDir, metadataFile, sep = "/"), sep = "auto", header = TRUE)
@@ -204,7 +204,7 @@ Blastn vs RNA database for ribosomal or other RNA genes. Rfam.fasta comes with t
 download the Rfam database. Do this only when it hasn't already been done, or if it's been a really
 long time and you need to update the database:   
   
-**_$ cd ~/prog/_**  
+**_$ cd ~/prog/databases/_**  
 **_$ mkdir rfam_**  
 **_$ cd rfam_**  
 **_$ wget -r_ ftp://ftp.ebi.ac.uk/pub/databases/Rfam/CURRENT/fasta_files/**  
@@ -217,7 +217,7 @@ long time and you need to update the database:
 **Run Blastn against the rfam database:**
 ```{r}
 prefix <- "RepeatDB_blastn"
-cmd <- paste("blastn -db /home/CFIA-ACIA/girouxeml/prog/rfam/rfam.fasta -query ",
+cmd <- paste("blastn -db /home/CFIA-ACIA/girouxeml/prog/databases/rfam/rfam.fasta -query ",
              paste(allSppRepeatDBpath, "Unknown_consensi.fa.classified", sep = "/"),
              " -evalue 10e-5 -num_alignments 5 -num_threads 20 > ",
              paste(allSppRepeatDBpath, "Unknown_consensi.fa.classified.rnacheck.blast.out", sep = "/"), sep = "")
@@ -412,9 +412,9 @@ cmd <- with(metadata,
                   " > ",
                   paste(RepeatDB, "Final_mask/", shortname, ".assembly.full_mask.complex.reformat.gff3 ", sep = ""),
                   sep =""))
-# cat /isilon/cfia-ottawa-fallowfield/users/girouxeml/PIRL_working_directory/colletotrichum_H109_annotation/colleto_H109/RepeatDB/Final_mask/colleto_H109.assembly.full_mask.complex.gff3 | \
+# cat /home/CFIA-ACIA/girouxeml/PIRL_working_directory/colletotrichum_H109_annotation/colleto_H109/RepeatDB/Final_mask/colleto_H109.assembly.full_mask.complex.gff3 | \
 #  perl -ane '$id; if(!/^\#/){@F = split(/\t/, $_); chomp $F[-1];$id++; $F[-1] .= "\;ID=$id"; $_ = join("\t", @F)."\n"} print $_' \
-#  > /isilon/cfia-ottawa-fallowfield/users/girouxeml/PIRL_working_directory/colletotrichum_H109_annotation/colleto_H109/RepeatDB/Final_mask/colleto_H109.assembly.full_mask.complex.reformat.gff3
+#  > /home/CFIA-ACIA/girouxeml/PIRL_working_directory/colletotrichum_H109_annotation/colleto_H109/RepeatDB/Final_mask/colleto_H109.assembly.full_mask.complex.reformat.gff3
 ```
 cat Fus3.assembly.full_mask.complex.gff3 | \\  
 perl -ane '$id; if(!/^\#/){@F = split(/\t/, $_); chomp $F[-1];$id++; $F[-1] .= "\;ID=$id"; $_ = join("\t", @F)."\n"} print $_' \  
@@ -823,7 +823,7 @@ take a lot longer though, but at least it's still moving along.
 prefix <- "Busco_MakerRnd1"
 node <- 19
 cmd <- with(metadata,
-            paste("cd ", snapRnd1, " && run_BUSCO.py -i ", paste(shortname, "all.maker.transcripts1000.fasta", sep = "_"),
+            paste("cd ", snapRnd1, " && busco -i ", paste(shortname, "all.maker.transcripts1000.fasta", sep = "_"),
                   " -o ", paste(shortname, "rnd1_maker", sep = "_"), " -c ", node,
                   " -l ", paste(buscoDataSets, "sordariomyceta_odb9", sep = "/"), 
                   " -m genome -sp fusarium_graminearum -z --augustus_parameters='--progress=true'",
@@ -1227,7 +1227,7 @@ instead.
 prefix <- "Busco_MakerRnd2"
 node <- 14
 cmd <- with(metadata,
-            paste("cd ", snapRnd2, " && run_BUSCO.py -i ", 
+            paste("cd ", snapRnd2, " && busco -i ", 
                   paste(makerRnd2Out, paste(shortname, "all.maker.transcripts.fasta", sep = "."), sep = "/"),
                   " -o annotation_eval -c ", node, " -l ", paste(buscoDataSets, "sordariomyceta_odb9", sep = "/"), 
                   " -m transcriptome -sp Colletotrichum_H109 -z --augustus_parameters='--progress=true'",
@@ -1750,7 +1750,7 @@ instead.
 prefix <- "Busco_MakerRnd3"
 node <- 14
 cmd <- with(metadata,
-            paste("cd ", snapRnd3, " && run_BUSCO.py -i ", 
+            paste("cd ", snapRnd3, " && busco -i ", 
                   paste(makerRnd3Out, paste(shortname, "all.maker.transcripts.fasta", sep = "."), sep = "/"),
                   " -o annotation_eval -c ", node, " -l ", paste(buscoDataSets, "sordariomyceta_odb9", sep = "/"), 
                   " -m transcriptome -sp Colletotrichum_H109_AugRnd2 -z --augustus_parameters='--progress=true'",
@@ -1782,26 +1782,383 @@ C:77.4%[S:73.2%,D:4.2%],F:4.3%,M:18.3%,n:3725
 
 To predict secondary metabolites, use antismash witin a conda environment:
 
-
 **Compress Maker round 1 and 2 output directories**  
 We will be using files from MAKER round 3 for processing from now on, and so should compress these directories to conserve space. If necessary, we can untar them and refer back to the files.
 ```{r}
-prefix <- "tar_zcvf_maker_round_2_3"
+prefix <- "tar_zcvf_maker_round_1_2"
 cmd    <- with(metadata, 
-               paste("tar -zcvf ", paste(RepeatDB, "maker_round_1.tar.gz ", sep = "/"), 
-                     paste(RepeatDB, "maker_round_1", sep = "/"), "; ",
-                     "tar -zcvf ", paste(RepeatDB, "maker_round_2.tar.gz ", sep = "/"),
-                     paste(RepeatDB, "maker_round_2", sep = "/"), "; ",
-                     "rm -rf ", paste(RepeatDB, "maker_round_1", sep = "/"), "; ", 
-                     "rm -rf ", paste(RepeatDB, "maker_round_2", sep = "/"), sep = ""))
+               paste("tar -zcvf ", paste(sharedPathAn, shortname, "maker_round_1.tar.gz ", sep = "/"), 
+                     paste(sharedPathAn, shortname, "maker_round_1", sep = "/"), "; ",
+                     "tar -zcvf ", paste(sharedPathAn, shortname, "maker_round_2.tar.gz ", sep = "/"),
+                     paste(sharedPathAn, shortname, "maker_round_2", sep = "/"), "; ",
+                     "rm -rf ", paste(sharedPathAn, shortname, "maker_round_1", sep = "/"), "; ", 
+                     "rm -rf ", paste(sharedPathAn, shortname, "maker_round_2", sep = "/"), sep = ""))
 suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd, prefix, suffix, node)
 ```
-
 **To remove the output files after you are done:**
 ```{r}
 RemoveQsubTempFiles(sharedPathAn, prefix)
 ```
 
 **Prepare for post-MAKER processing***    
+```{r}
+dir.create(paste(sharedPathAn, metadata$shortname, "postMakerProcessing", sep = "/"), showWarnings = TRUE, recursive = FALSE)
+metadata$postMaker <- paste(sharedPathAn, metadata$shortname, "postMakerProcessing", sep = "/")
+```
+
+Copy the gff3 and final MAKER transcript, trnaTranscript, and proteins fasta files fromt he final MAKER round (round 3) to the postMakerProcessing directory.
+```{r}
+#collmakerGFF3 <- paste(metadata$makerRnd3Out, paste(metadata$shortname, "all.maker.gff3", sep = "_"), sep = "/")
+collmakerGFF3 <- paste(metadata$shortname, "all.maker.gff3", sep = "_")
+collmakerGFF3noseq <- paste(metadata$shortname, "all.maker.noseq.gff3", sep = "_")
+collmakertRNA <- paste(metadata$shortname, "all.maker.trnascan.transcripts.fasta", sep = ".")
+collmakerTranscripts <- paste(metadata$shortname, "all.maker.transcripts.fasta", sep = ".")
+collmakerProteins <- paste(metadata$shortname, "all.maker.proteins.fasta", sep = ".")
+
+cmd <- paste("cd", metadata$makerRnd3Out, "&& cp", collmakerGFF3, collmakerGFF3noseq,
+             collmakerProteins,  collmakerTranscripts, collmakertRNA, metadata$postMaker, sep = " ")
+sapply(cmd, function(x) system(x))
+```
+Fix MAKER feature names in gff3 and fasta files.
+
+Create naming table (there are additional options for naming beyond defaults):      
+Temporary Locus_tag prefix CGXH109
+```{r}
+locus_tag_prefix <- "CGXH109"
+metadata$locusTagPrefix <- locus_tag_prefix
+justify = 6
+abrvGene = "G"
+abrvTrans = "T"
+
+cmd <- with(metadata, paste("cd ", postMaker, " && ", makerMapPath, " --prefix ", 
+                            paste(locusTagPrefix, "_", sep = ""), 
+                            " --justify ", justify, " --abrv_gene ", abrvGene, " --abrv_tran ", abrvTrans, 
+                            " ", paste(postMaker, collmakerGFF3, sep = "/"), 
+                            " > ", paste(postMaker, paste(shortname, "map", sep = "."), sep = "/"), sep = ""))
+sapply(cmd, function(x) system(x))
+```
+Remove the -RA from the mapping IDs: 
+```{r}
+cmd <- with(metadata, paste("sed -i 's/-RA//g' ", paste(postMaker, paste(shortname, "map", sep = "."), sep = "/")))
+sapply(cmd, function(x) system(x))
+```
+Replace names in GFF files:  
+```{r}
+# Rename gff3:
+cmd <- with(metadata, paste(makerMapGffPath, " ", paste(postMaker, paste(shortname, "map", sep = "."), sep = "/"),
+                            " ", paste(postMaker, collmakerGFF3, sep = "/"), sep = ""))
+# Rename gff3 no seqs:
+cmd2 <- with(metadata, paste(makerMapGffPath, " ", paste(postMaker, paste(shortname, "map", sep = "."), sep = "/"),
+                             " ", paste(postMaker, collmakerGFF3noseq, sep = "/"), sep = ""))
+sapply(cmd, function(x) system(x))
+sapply(cmd2, function(x) system(x))
+
+# Replace names in FASTA headers:
+cmd <- with(metadata, paste(makerMapFasta, " ", paste(postMaker, paste(shortname, "map", sep = "."), sep = "/"),
+                            " ", paste(postMaker, collmakerProteins, sep = "/"), sep = ""))
+cmd2 <- with(metadata, paste(makerMapFasta, " ", paste(postMaker, paste(shortname, "map", sep = "."), sep = "/"),
+                             " ", paste(postMaker, collmakerTranscripts, sep = "/"), sep = ""))
+cmd3 <- with(metadata, paste(makerMapFasta, " ", paste(postMaker, paste(shortname, "map", sep = "."), sep = "/"),
+                             " ", paste(postMaker, collmakertRNA, sep = "/"), sep = ""))
+sapply(cmd, function(x) system(x))
+sapply(cmd2, function(x) system(x))
+sapply(cmd3, function(x) system(x))
+```
+
+Running interproscan:     
+Note! Interproscan match look-up service must be running on biocomp-0-2 while the next command runs.     
+1. Log onto biocomp-0-2:     
+     $ qlogin -l h=biocomp-0-2      
+2. Start the interproscan environment:     
+     $ conda activate interproscan     
+3. cd to the match lookup directory:     
+     $ cd ~/prog/anaconda3/envs/interproscan/lookup_service_5.35-74.0     
+4. Run the interproscan local match lookup service:      
+     $ java -Xmx2000m -jar server-5.35-74.0-jetty-console.war --headless --port 8080 &    
+```{r}
+dir.create(paste(metadata$postMaker, "iprscan", sep = "/"), showWarnings = TRUE, recursive = FALSE)
+metadata$iprscan <- paste(metadata$postMaker, "iprscan", sep = "/")
+
+prefix <- "iprscan2"
+node <- 12
+cmd <- with(metadata,
+            paste("conda activate interproscan && ", 
+                  "cd /home/CFIA-ACIA/girouxeml/prog/anaconda3/envs/interproscan/lookup_service_5.35-74.0 && ",
+                  "java -Xmx2000m -jar server-5.35-74.0-jetty-console.war --headless --port 8080 && ",
+                  "cd ", iprscan, " && interproscan.sh -f TSV -iprlookup -goterms -pa -t p --cpu ", node,
+                  " -i ", paste(postMaker, collmakerProteins, sep = "/"),
+                  " -o ", paste(iprscan, "output.iprscan2", sep = "/"),
+                  " && conda deactivate ", sep = ""))
+suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd, prefix, suffix, node)
+metadata$iprOut <- paste(metadata$iprscan, "output.iprscan", sep = "/")
+#metadata$iprOut2 <- paste(metadata$iprscan, "output.iprscan2", sep = "/")
+```
+**To remove the output files after you are done:**
+```{r}
+RemoveQsubTempFiles(sharedPathAn, prefix)
+```
+
+
+Run a BLASTp on the proteins fasta file against the uniprot-swiss-prot protein database.     
+Note: Make sure you run a protein to protein BLAST and that you use output format 6. Make sure to use the version in the conda env bio which
+works with the -max_hsps option. The one on the biocluster doesn't have this option. The version installed in anaconda3/env/bio/bin is 2.9.0+.    
+To make the uniprot/swiss prot protein database, in the ~/Databases/uniprot/ directory, gunzip the uniprot_sprot.fasta.gz and run:     
+$ makeblastdb -in uniprot_sprot.fasta -dbtyp prot    
+```{r}
+dir.create(paste(metadata$postMaker, "blastp", sep = "/"), showWarnings = TRUE, recursive = FALSE)
+metadata$blastp <- paste(metadata$postMaker, "blastp", sep = "/")
+
+prefix <- "post_maker_BLASTp"
+node   <- 12
+cmd    <- with(metadata,
+               paste("conda activate bio && cd ", blastp, 
+                     " && blastp -num_threads ", node, 
+                     " -query ../", collmakerProteins, 
+                     " -db ", uniProtDBPath, " -evalue 1e-6 -max_hsps 1 -max_target_seqs 1 -outfmt 6 ",
+                     " -out ", paste(blastp, "uniProtswissProt_blast.out", sep = "/"), 
+                     # Make a copy of the BLAST output for renaming, so the original isn't altered:
+                     " && cp ", paste(blastp, "uniProtswissProt_blast.out", sep = "/"),
+                     " ", paste(blastp, "uniProtswissProt_blast.out.bak", sep = "/"),
+                     # Compress the original BLAST ouptut:
+                     " && gzip ", paste(blastp, "uniProtswissProt_blast.out.bak", sep = "/"),
+                     " && conda deactivate", sep = ""))
+suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd, prefix, suffix, node)
+metadata$blastpOut <- paste(metadata$blastp, "uniProtswissProt_blast.out", sep = "/")
+```
+**To remove the output files after you are done:**
+```{r}
+RemoveQsubTempFiles(sharedPathAn, prefix)
+```
+
+Add the InterProScan and BLASTp gene function predictions to gffs.     
+Next lets add putative gene functions using output in a BLAST job of our proteins against UniProt/Swiss-Prot. Here we use the following scripts:
+
+maker_functional_gff - adds putative functions from BLAST report to GFF3 files (supports UniProt/Swiss-Prot headers)
+maker_functional_fasta - adds putative functions from BLAST report to FASTA files (supports UniProt/Swiss-Prot headers).
+```{r}
+prefix1 <- "blastp_gff_noSeq"
+cmd1 <- with(metadata,
+             paste("conda activate makerenv && cd ", blastp, " && ",
+                   "maker_functional_gff ", uniProtDBPath, " uniProtswissProt_blast.out", " ../", collmakerGFF3noseq,
+                   " > blastp_", collmakerGFF3noseq,  
+                   " && conda deactivate", sep = ""))
+metadata$blastpGFF3noSeq <- paste(metadata$blastp, paste("blastp_", collmakerGFF3noseq, sep = ""), sep = "/")
+
+prefix2 <- "blastp_gff"
+cmd2 <- with(metadata,
+             paste("conda activate makerenv && cd ", blastp, " && ",
+                   "maker_functional_gff ", uniProtDBPath, " uniProtswissProt_blast.out", " ../", collmakerGFF3,
+                   " > blastp_", collmakerGFF3,  
+                   " && conda deactivate", sep = ""))
+metadata$blastpGFF3 <- paste(metadata$blastp, paste("blastp_", collmakerGFF3, sep = ""), sep = "/")
+
+prefix3 <- "blastp_prot"
+cmd3 <- with(metadata,
+             paste("conda activate makerenv && cd ", blastp, " && ",
+                   "maker_functional_fasta ", uniProtDBPath, " uniProtswissProt_blast.out", " ../", collmakerProteins,
+                   " > blastp_", collmakerProteins, 
+                   " && conda deactivate", sep = ""))
+metadata$blastpProt <- paste(metadata$blastp, paste("blastp_", collmakerProteins, sep = ""), sep = "/")
+prefix4 <- "blastp_trans"
+cmd4 <- with(metadata,
+             paste("conda activate makerenv && cd ", blastp, " && ",
+                   "maker_functional_fasta ", uniProtDBPath, " uniProtswissProt_blast.out", " ../", collmakerTranscripts,
+                   " > blastp_", collmakerTranscripts, 
+                   " && conda deactivate", sep = ""))
+metadata$blastpTransc <- paste(metadata$blastp, paste("blastp_", collmakerTranscripts, sep = ""), sep = "/")
+suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd1, prefix1, suffix) 
+suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd2, prefix2, suffix) 
+suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd3, prefix3, suffix)
+suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd4, prefix4, suffix)
+```
+**To remove the output files after you are done:**
+```{r}
+RemoveQsubTempFiles(sharedPathAn, prefix1); RemoveQsubTempFiles(sharedPathAn, prefix2); RemoveQsubTempFiles(sharedPathAn, prefix3)
+rm(cmd, cmd1, cmd2, cmd3, cmd4, prefix, prefix1, prefix2, preix3, prefix4)
+```
+
+Look at the files to see that putative functions were added.
+```{r}
+cmd <- with(metadata, paste("head -10", blastpProt, sep = " "))
+system(cmd)
+cmd <- with(metadata, paste("head -10", blastpGFF3noSeq, sep = " "))
+system(cmd)
+```
+Finally we will add protein domain information to the final annotations using the report from InterProScan:
+```{r}
+prefix1 <- "iprGFFnoSeq" 
+cmd1 <- with(metadata,
+             paste("conda activate makerenv && cd", postMaker, "&&",
+                   "ipr_update_gff", blastpGFF3noSeq, iprOut, 
+                   ">", paste("ipr_blastp_", collmakerGFF3noseq, sep = ""), 
+                   "&& conda deactivate", sep = " "))
+prefix2 <- "iprGFF"
+cmd2 <- with(metadata,
+             paste("conda activate makerenv && cd", postMaker, "&&",
+                   "ipr_update_gff", blastpGFF3, iprOut, 
+                   ">", paste("ipr_blastp_", collmakerGFF3, sep = ""), 
+                   "&& conda deactivate", sep = " "))
+prefix3 <- "iprVisGFFnoSeq"
+cmd3 <- with(metadata,
+             paste("conda activate makerenv && cd", postMaker, "&&",
+                   "iprscan2gff3", iprOut, collmakerGFF3noseq, 
+                   ">", paste("visible_ipr_", collmakerGFF3noseq, sep = ""), 
+                   "&& conda deactivate", sep = " "))
+prefix4 <- "iprVisGFF"
+cmd4 <- with(metadata,
+             paste("conda activate makerenv && cd", postMaker, "&&",
+                   "iprscan2gff3", iprOut, collmakerGFF3, 
+                   ">", paste("visible_ipr_", collmakerGFF3, sep = ""), 
+                   "&& conda deactivate", sep = " "))
+
+suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd1, prefix1, suffix) 
+suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd2, prefix2, suffix) 
+suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd3, prefix3, suffix)
+suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd4, prefix4, suffix)
+
+metadata$iprBlastGFF3noseq <- paste(metadata$postMaker, paste("ipr_blastp_", collmakerGFF3noseq, sep = ""), sep = "/")
+metadata$iprBlastGFF3 <- paste(metadata$postMaker, paste("ipr_blastp_", collmakerGFF3, sep = ""), sep = "/")
+metadata$iprVisGFF3noseq <- paste(metadata$postMaker, paste("visible_ipr_", collmakerGFF3noseq, sep = ""), sep = "/")
+metadata$iprVisGFF3 <- paste(metadata$postMaker, paste("visible_ipr_", collmakerGFF3, sep = ""), sep = "/")
+```
+**To remove the output files after you are done:**
+```{r}
+RemoveQsubTempFiles(sharedPathAn, prefix1); RemoveQsubTempFiles(sharedPathAn, prefix2); RemoveQsubTempFiles(sharedPathAn, prefix3); RemoveQsubTempFiles(sharedPathAn, prefix4)
+rm(cmd, cmd1, cmd2, cmd3, cmd4, prefix, prefix1, prefix2, prefix3, prefix4)
+```
+
+
+GenomeTools:     
+1. The gff3 files output by MAKER contain features gene, mRNA, exon, CDS, tRNA, match, partial-match, protein_match, match_part.    
+They are missing the ##sequence-region lines, and intron features.    
+
+2. We can add the missing ##sequence-region lines and intron features and make sure all the features are within the newly added region lines using Genometools gt gff3 -tidy -addintrons -fixregionboundaries. All features are retained, and introns are added.          
+
+3. Use the gff3validator tool from genometools to make sure that the gff3 files are valid.
+```{r}
+# Generated tidy gff3 for gff3 with sequences and with no sequences:
+prefix1 <- "iprBlastTidy"
+tidyGff3 <- paste(metadata$shortname, "ipr.blast.tidy.gff3", sep = ".")
+cmd1 <- with(metadata, paste("conda activate makerenv && cd", postMaker, 
+                             "&& gt gff3 -tidy -fixregionboundaries -addintrons",
+                             iprBlastGFF3, ">", tidyGff3, "&& conda deactivate", sep = " "))
+
+prefix2 <- "iprBlastTidyNoSeq"
+tidyGff3noseq <- paste(metadata$shortname, "ipr.blast.noseq.tidy.gff3", sep = ".")
+cmd2 <- with(metadata, paste("conda activate makerenv && cd", postMaker,
+                             "&& gt gff3 -tidy -fixregionboundaries -addintrons",
+                             iprBlastGFF3noseq, ">", tidyGff3noseq, "&& conda deactivate", sep = " "))
+prefix3 <- "iprBlastTidySorted"
+# Generated tidy+sorted gff3 for gff3 with sequences and with no sequences:
+tidySortedGff3 <- paste(metadata$shortname, "ipr.blast.tidy.sorted.gff3", sep = ".")
+cmd3 <- with(metadata, paste("conda activate makerenv && cd", postMaker,
+                             "&& gt gff3 -tidy -fixregionboundaries -addintrons -sort",
+                             iprBlastGFF3, ">", tidySortedGff3, "&& conda deactivate", sep = " "))
+prefix4 <- "iprBlastTidySortedNoSeq"
+tidySortedGff3noseq <- paste(metadata$shortname, "ipr.blast.noseq.tidy.sorted.gff3", sep = ".")
+cmd4 <- with(metadata, paste("conda activate makerenv && cd", postMaker,
+                             "&& gt gff3 -tidy -fixregionboundaries -addintrons -sort",
+                             iprBlastGFF3noseq, ">", tidySortedGff3noseq, "&& conda deactivate", sep = " "))
+
+suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd1, prefix1, suffix) 
+suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd2, prefix2, suffix) 
+suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd3, prefix3, suffix)
+suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd4, prefix4, suffix)
+```
+**To remove the output files after you are done:**
+```{r}
+RemoveQsubTempFiles(sharedPathAn, prefix1); RemoveQsubTempFiles(sharedPathAn, prefix2); RemoveQsubTempFiles(sharedPathAn, prefix3); RemoveQsubTempFiles(sharedPathAn, prefix4)
+rm(cmd1, cmd2, cmd3, cmd4, prefix, prefix1, prefix2, prefix3, prefix4)
+```
+
+EMBLmyGFF3:     
+Use to generate intermediate file for NCBI sqn file generation.     
+Scientific name/taxid: Colletotrichum isolate H109     
+-i Locus_tag: CGXH109_G000000     
+-m Molecule type: genomic DNA     
+-p Project ID:  XXX    
+-t Topology: linear      
+-r Genomic Transl_table: 1
+Mitochondrial Transl_table: 4 (Mold Mitochondrial, Protozoan Mitochondrial, Coelenterat Mitochondrial, Mycoplasma, Spiroplasma)     
+-l classification: Colletotrichum
+-v verbose   
+--locus_numbering_start: 1
+
+```{r}
+prefix <- "emblGff3"
+emblOut <- "blast.ipr.embl.results.tbl"
+cmd <- with(metadata, 
+            paste("conda activate makerenv && cd", postMaker, "&& emblmygff3",
+                  tidySortedGff3noseq, assembly, "-s 'Colletotrichum gloeosporioides' --strain H109 -i CGXH109",
+                  "-p XXX -m 'genomic DNA' -t linear -r 1 -l Colletotrichum -v --use_attribute_value_as_locus_tag Name",
+                  "--translate -o", emblOut, "&& conda deactivate", sep = " "))
+suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd, prefix, suffix) 
+```
+**To remove the output files after you are done:**
+```{r}
+RemoveQsubTempFiles(sharedPathAn, prefix)
+```
+
+***Note:***     
+Script below was not run - opted to to use EMBL format to generate feature table from the annotated gff3 files. Need to revisit and see how collaborators want to submit annotation, and to where - GenBank or EMBL. If they want to submit to GenBank, once I get the project number, and locus_tags from them, will need to revisit the genbank flatfile criteria as there are some hiccups with GAG that end up with annotations being lost and a lot more time to properly reintegrate them, using a combination of GAG, Annie, and tbl2asn.     
+
+# Find errors in gff file with GAG:
+```{r}
+ # gag.py -f ../../../../References/colletotrichum/colleto_assembly_largeContigs.fixedNames.fasta -g ../colleto_H109_all.maker.gff3 --fix_start_stop -ris 10 --fix_terminal_ns -o .
+# mkdir tbl2asn
+# mv genome.tbl genome.tbl.bak; sed '/\t\t\tgene.*/d' genome.tbl.bak > genome.tbl
+# mv genome.tbl colleto_H109.tbl
+# mv genome.fasta colleto_H109.fsa
+# cp Lari_template.sbt tbl2asn/colleto_H109.sbt # and edit for colletotrichum
+# cp colleto_H109.* tbl2asn/
+# cd tbl2asn/
+# tbl2asn -j "[organism=Colletotrichum isolate H109] [strain=CGXH109]" -t colleto_H109.sbt -p. -M n -Z discrep -a r1k -c b -V b  
+```
+
 
 ### Generation of NCBI Submission Files with GAG - to validate and fix gff errors:  
+We can generate our genome submission files using the Genome Annotation Generator (GAG) prior to running BLAST and InterProScan.
+What we focus on from this are the validation and error files that are generated that will tell us all the gene features that are invalid, such as protein with internal stop detected, or incomplete gene or missing stop codn, etc., and we go through these and fix all the errors, re-run GAG iteratively until no more errors are present. Once all the errors are solved, then we use InterProscan and Blast and whatever else for annotation, and so don’t waste our time annotating invalid features. 
+```{r}
+metadata$gag1 <- paste(metadata$postMaker, "gag_1", sep = "/")
+dir.create(metadata$gag1, showWarnings = TRUE, recursive = FALSE)
+
+# Run GAG:
+cmd <- with(metadata, paste("cd ", gag1, " && ", gagPath, " -f ", assembly, " -g ", tidyGff3noseq,
+                            " --fix_start_stop -ris 10 -o . ", sep = ""))
+sapply(cmd, function(x) system(x))
+```
+
+
+
+$ mkdir gag; cd gag  
+$ python ~/prog/gag/genomeannotation-GAG-40ea515/gag.py -f ../../../Lcer_NCBI_files/Lcer_assembly_EG2017_mod.fna -g ../Lcer_rnd3.all.maker_jb.gff3 --fix_start_stop -ris 10 -o gag_pass1_fix_start_stop_short_introns  
+$ mv genome.tbl genome.tbl.bak; sed '/\t\t\tgene.*/d' genome.tbl.bak > genome.tbl 
+$ mv genome.tbl Lcer.tbl     
+$ mv genome.fasta Lcer.fsa   
+$ mkdir tbl2asn  
+$ cp ../../../../../template.sbt tbl2asn/Lcer_template.sbt
+$ cp L* tbl2asn/  
+$ cd tbl2asn   
+$ ~/prog/linux64.tbl2asn -j "[organism=LariEG1201] [strain=ABC 123]" -t Lcer_template.sbt -p. -M n -Z discrep -a r1k -c b -V b  
+$ cat errorsummary.val
+Fix the errors captured in this document.
+Run gag for a second round to make sure all the errors were fixed:
+```{r}
+prefix <- "gag_pass2"
+previousGagDir <- "gag_pass1_fix_start_stop_short_introns/"
+cmd    <- with(metadataAssemblies,
+               paste("cd ", paste(postMaker, "gag/", sep = ""), " && ",
+                     "python ", gagPath, " -f ", paste(postMaker, "gag/", previousGagDir, SppAbbrv, ".fsa", sep = ""),
+                     " -g ", paste(postMaker, "gag/", previousGagDir, "genome.edit.gff", sep = ""),
+                     " -o ", paste(postMaker, "gag/", "gag_pass2_eval", sep = ""), sep = ""))
+cmd[1]
+suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd, prefix, suffix)               
+```
+
+
+
+
+
+
+
