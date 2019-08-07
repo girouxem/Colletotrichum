@@ -78,6 +78,9 @@ snapPath        <- paste(makerEnvPath, "bin/snap", sep = "/")
 pathtRNA_scan   <- paste(makerEnvPath, "bin/tRNAscan-SE", sep = "/")
 pathtRNAscan131 <- paste(progPath, "tRNAscan-SE-1.3.1/tRNAscan-SE", sep = "/") # Maker only works with v 1.3.1, not v 2.0 of tRNAscan-SE
 
+# Orthofinder:
+orthoFinderPath <- paste(progPath, "OrthoFinder-2.3.1/orthofinder", sep = "/")
+
 # Extra scripts:
 fixGAGNamePath   <- paste(scriptsPath, "fix_GAG_Name.sh", sep = "")
 getAnnoFastaPath <- paste(scriptsPath, "getAnnoFasta.pl", sep = "")

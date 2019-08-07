@@ -1879,19 +1879,32 @@ Note! Interproscan match look-up service must be running on biocomp-0-2 while th
 dir.create(paste(metadata$postMaker, "iprscan", sep = "/"), showWarnings = TRUE, recursive = FALSE)
 metadata$iprscan <- paste(metadata$postMaker, "iprscan", sep = "/")
 
-prefix <- "iprscan2"
-node <- 12
-cmd <- with(metadata,
-            paste("conda activate interproscan && ", 
-                  "cd /home/CFIA-ACIA/girouxeml/prog/anaconda3/envs/interproscan/lookup_service_5.35-74.0 && ",
-                  "java -Xmx2000m -jar server-5.35-74.0-jetty-console.war --headless --port 8080 && ",
-                  "cd ", iprscan, " && interproscan.sh -f TSV -iprlookup -goterms -pa -t p --cpu ", node,
-                  " -i ", paste(postMaker, collmakerProteins, sep = "/"),
-                  " -o ", paste(iprscan, "output.iprscan2", sep = "/"),
-                  " && conda deactivate ", sep = ""))
-suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd, prefix, suffix, node)
-metadata$iprOut <- paste(metadata$iprscan, "output.iprscan", sep = "/")
-#metadata$iprOut2 <- paste(metadata$iprscan, "output.iprscan2", sep = "/")
+# prefix <- "iprscan"
+# node <- 12
+# cmd <- with(metadata,
+#             paste("conda activate interproscan && ", 
+#                   "cd ", iprscan, " && interproscan -f TSV -iprlookup -goterms -pa -t p --cpu ", node,
+#                   " -i ", paste(postMaker, collmakerProteins, sep = "/"),
+#                   " -o ", paste(iprscan, "output.iprscan2", sep = "/"),
+#                   " && conda deactivate ", sep = ""))
+# suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd, prefix, suffix, node)
+
+# The interproscan.properties file edited to use biocomp-0-5
+# run using qsub -l hostname=biocomp-0-5 -pe smp 24 -cwd -S /bin/bash iprscan21.sub
+# Now got it to work - need to submit qsub that initialises iprlookup service on specific node, then once setup, kill that qsub. Then, run qsub on biocomp-0-5 to activate and run iprlookup on cluster, then wait a few minutes and run separate qsub for the interproscan command on biocomp-0-5 while the previous qsub continues to run. When qsub for interproscan command finishes running, kill the iprlookup running job.
+
+iprapps <- c("TIGRFAM,SFLD,ProDom,Hamap,SMART,CDD,ProSiteProfiles,ProSitePatterns,SUPERFAMILY,PRINTS,PANTHER,Gene3D,PIRSF,Pfam,Coils,MobiDBLite,SignalP_EUK,Phobius") # removed TMHMM
+prefix3 <- "iprscan3"
+node <- 24
+cmd3 <- with(metadata,
+             paste("conda activate interproscan && ",
+                   "cd ", iprscan, " && interproscan -f TSV,XML,GFF3 -iprlookup -goterms -pa -t p --cpu ", node,
+                   " -appl ", iprapps,
+                   " -i ", paste(postMaker, collmakerProteins, sep = "/"),
+                   " -b ", paste(iprscan, "iprscan3", sep = "/"),
+                   " && conda deactivate ", sep = ""))
+suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd3, prefix3, suffix, node)
+metadata$iprOut <- paste(metadata$iprscan, "output.iprscan3", sep = "/")
 ```
 **To remove the output files after you are done:**
 ```{r}
@@ -2071,89 +2084,202 @@ RemoveQsubTempFiles(sharedPathAn, prefix1); RemoveQsubTempFiles(sharedPathAn, pr
 rm(cmd1, cmd2, cmd3, cmd4, prefix, prefix1, prefix2, prefix3, prefix4)
 ```
 
-EMBLmyGFF3:     
-Use to generate intermediate file for NCBI sqn file generation.     
-Scientific name/taxid: Colletotrichum isolate H109     
--i Locus_tag: CGXH109_G000000     
--m Molecule type: genomic DNA     
--p Project ID:  XXX    
--t Topology: linear      
--r Genomic Transl_table: 1
-Mitochondrial Transl_table: 4 (Mold Mitochondrial, Protozoan Mitochondrial, Coelenterat Mitochondrial, Mycoplasma, Spiroplasma)     
--l classification: Colletotrichum
--v verbose   
---locus_numbering_start: 1
+Use GAAS to flag short introns in gff3 file (conda bio env):    
+$  ~/prog/GAAS/annotation/Tools/bin/gff3_sp_flag_short_intron.pl --gff ipr_blastp_colleto_H109_all.maker.gff3 --out colleto_H109_iprBlast_flagShortIntrons.gff3     
 
+Use genometools to tidy, sort, fix region boundaries, add introns to gff3 (conda makerenv env):    
+$ gt gff3 -tidy -fixregionboundaries -addintrons -sort colleto_H109_iprBlast_flagShortIntrons.gff3 > colleto_H109_iprBlast_flagShortIntrons.tidy.sorted.gff3     
+
+Use emblmygff3 to generate embl table:     
+$ emblmygff3 colleto_H109_iprBlast_flagShortIntrons.tidy.sorted.gff3 colleto_assembly_largeContigs.fixedNames.fasta -i CGXH109 -p PRJEB33601 -r 1 -s 2598078 -t linear -m 'genomic DNA'  -d HTG -x FUN -v -o colletoH109     
+
+gzip embl table:     
+$ gzip colletoH109.embl     
+
+make md5sum file and get value:     
+$ md5sum colletoH109.embl.gz > colletoH109.embl.gz.md5     
+$ md5sum colletoH109.embl.gz.md5     
+714b1a7acdcbc152f65a1b24cbb3b027  colletoH109.embl.gz.md5     
+
+update manifest file:     
+[CFIA-ACIA+girouxeml@biocomp-0-1 embl]$ cat manifest2.tsv    
+STUDY   PRJEB33601     
+NAME    Colletotrichum H109 annotation1     
+FLATFILE        colletoH109.embl.gz     
+
+
+Validate the embl flatfile using the webin-cli:     
+$ java -jar ~/prog/webin-cli/webin-cli-1.8.8.jar -manifest=manifest2.tsv -userName=Webin-53446 -password=Bryn2608 -context=sequence -validate     
+
+Fix tricky errors:     
+Note that some errors may need to be fixed by hand:
+''ERROR: Abutting features cannot be adjacent between neighbouring exons'' : it seems that just marking this exon as /pseudo doesn't help. You need to actually delete the offending exon feature from the EMBL file, and then it will be passed by the ENA's EMBL file validator. You can leave the CDS feature that the exon belongs to in the EMBL file.     
+
+2019-07-26T17:47:06 ERROR: Abutting features cannot be adjacent between neighbouring exons. [ line: 476672 of colletoH109.embl.gz]
+2019-07-26T17:47:12 ERROR: Abutting features cannot be adjacent between neighbouring exons. [ line: 560276 of colletoH109.embl.gz]
+
+Find out what locus tag features these are, so that we can go and edit them out in the embl file:     
+$ sed -n '476672,476673p' colletoH109.embl     
+FT   exon            31435..35103     
+FT                   /locus_tag="CGXH109_LOCUS47927"     
+
+$ sed -n '560276,560277p' colletoH109.embl      
+FT   exon            9140..9742      
+FT                   /locus_tag="CGXH109_LOCUS56057"     
+     
+remove the offending exon features using vim editor:
+:vim /CGXH109_LOCUS56057/ %     
+esc, then go to beginning of line to remove, dd     
+Save and quit:     
+:wq!    
+
+Re-run validation:    
+Validate the embl flatfile using the webin-cli:     
+$ java -jar ~/prog/webin-cli/webin-cli-1.8.8.jar -manifest=manifest2.tsv -userName=Webin-53446 -password=Bryn2608 -context=sequence -validate     
+[CFIA-ACIA+girouxeml@biocomp-0-1 embl]$ java -jar ~/prog/webin-cli/webin-cli-1.8.8.jar -manifest=manifest2.tsv -userName=Webin-53446 -password=Bryn2608 -context=sequence -validate     
+INFO : Your application version is 1.8.8     
+INFO : Creating report file: /isilon/cfia-ottawa-fallowfield/users/girouxeml/PIRL_working_directory/colletotrichum_H109_annotation/colleto_H109/postMakerProcessing/embl/./webin-cli.report      
+INFO : The submission has been validated successfully.     
+HURRAY!!!!
+
+
+Now use the webin-cli to submit the files:     
+[CFIA-ACIA+girouxeml@biocomp-0-1 embl]$ java -jar ~/prog/webin-cli/webin-cli-1.8.8.jar -manifest=manifest2.tsv -userName=Webin-53446 -password=Bryn2608 -context=sequence -submit     
+INFO : Your application version is 1.8.8     
+INFO : Creating report file: /isilon/cfia-ottawa-fallowfield/users/girouxeml/PIRL_working_directory/colletotrichum_H109_annotation/colleto_H109/postMakerProcessing/embl/./webin-cli.report     
+INFO : Submission has not been validated previously.     
+INFO : The submission has been validated successfully.     
+INFO : Uploading file: /isilon/cfia-ottawa-fallowfield/users/girouxeml/PIRL_working_directory/colletotrichum_H109_annotation/colleto_H109/postMakerProcessing/embl/./colletoH109.embl.gz     
+
+INFO : Files have been uploaded to webin.ebi.ac.uk.     
+INFO : The submission has been completed successfully. The following analysis accession was assigned to the submission: ERZ1033207     
+
+
+
+EMBLmyGFF3:     
 ```{r}
 prefix <- "emblGff3"
 emblOut <- "blast.ipr.embl.results.tbl"
 cmd <- with(metadata, 
             paste("conda activate makerenv && cd", postMaker, "&& emblmygff3",
-                  tidySortedGff3noseq, assembly, "-s 'Colletotrichum gloeosporioides' --strain H109 -i CGXH109",
-                  "-p XXX -m 'genomic DNA' -t linear -r 1 -l Colletotrichum -v --use_attribute_value_as_locus_tag Name",
-                  "--translate -o", emblOut, "&& conda deactivate", sep = " "))
+                  tidySortedGff3noseq, assembly, 
+                  "-i CGXH109", # --locus_tag
+                  "-p PRJEB33601", # --project_id
+                  "-r 1", # --transl_table 
+                  "-s 2598078", # --species ('Colletotrichum sp. H109'), or taxid
+                  "-t linear", # --topology
+                  "-m 'genomic DNA'", # --molecule_type
+                  # Optional for EMBL - adding because registered this online
+                  #"-a ERS3603844", # --accession
+                  "-d HTG", # --data_class, HighThrouput Genome Assembly/Annotation
+                  "-x FUN", # --taxonomy - fungi
+                  ## "--de ", # Description 
+                  #"--translate", # include translation in CDS features
+                  "-v", # verbose
+                  #"--use_attribute_value_as_locus_tag Name",
+                  "-o", emblOut, # --output filename
+                  "&& conda deactivate", sep = " "))
 suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd, prefix, suffix) 
+```
+
+<?xml version="1.0" encoding="UTF-8"?><SAMPLE_SET>
+  <SAMPLE accession="ERS3603844" alias="Colletotrichum H109 annotation1" center_name="CANADIAN FOOD INSPECTION AGENCY">
+    <IDENTIFIERS>
+      <PRIMARY_ID>ERS3603844</PRIMARY_ID>
+      <SUBMITTER_ID namespace="CANADIAN FOOD INSPECTION AGENCY">Colletotrichum H109 annotation1</SUBMITTER_ID>
+    </IDENTIFIERS>
+    <TITLE>Colletotrichum sp H109 - fungal plant pathogen causing Apple Bitter Rot</TITLE>
+    <SAMPLE_NAME>
+      <TAXON_ID>2598078</TAXON_ID>
+      <SCIENTIFIC_NAME>Colletotrichum sp. H109</SCIENTIFIC_NAME>
+    </SAMPLE_NAME>
+    <SAMPLE_ATTRIBUTES>
+      <SAMPLE_ATTRIBUTE>
+        <TAG>ENA-CHECKLIST</TAG>
+        <VALUE>ERC000011</VALUE>
+      </SAMPLE_ATTRIBUTE>
+    </SAMPLE_ATTRIBUTES>
+  </SAMPLE>
+</SAMPLE_SET>
+
+Validate the embl flatfile using the webin-cli:     
+$ java -jar ~/prog/webin-cli/webin-cli-1.8.8.jar -manifest=manifest.tsv -userName=Webin-53446 -password=Bryn2608 -validate version2embl.embl.gz     
+
+
+
+Following the instructions on the http://ena-docs.readthedocs.io/en/latest/upload_01.html page, I did the following to transfer my files using ftp, to the ENA's "Webin upload area":
+% ftp webin.ebi.ac.uk [enter username and password]
+> bin
+> put my.embl
+> put my.embl.md5
+> bye
+
+
+**To remove the output files after you are done:**
+```{r}
+RemoveQsubTempFiles(sharedPathAn, prefix)
+```
+
+Running orthofinder     
+Start orthoFinder from scratch on a set of protein fasta files from different species, saved to a directory:
+Note** The protein fasta files must be in single line format such that one line is the header, and the next line is the sequence, with no breaks untile the next header. Use awk (https://stackoverflow.com/questions/15857088/remove-line-breaks-in-a-fasta-file):      
+
+$ awk '!/^>/ { printf "%s", $0; n = "\n" } /^>/ { print n $0; n = "" } END { printf "%s", n }' Fusvert.fa > Fusvert.singleline.fa
+
+```{r}
+orthofinderAnalysisDir <- paste(metadata$postMaker, "orthofinder", sep = "/")
+orthoProtfasPath <- paste(orthofinderAnalysisDir, "protSingleLineformat", sep = "/")
+list.files(orthoProtfasPath)
+```
+
+```{r}
+prefix <- "Test_OrthoFinder"
+node <- 20
+threadsAnalysis <- 20
+nameResultsDir <- "orthotest_1"
+cmd <- paste("conda activate bio && cd ", orthofinderAnalysisDir, " && ", orthoFinderPath,
+             " -t ", node, " -a ", threadsAnalysis, " -M msa ",
+             " -n ", nameResultsDir, 
+             " -f ", orthoProtfasPath,
+             " && conda deactivate", sep = "")
+cmd
+suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd, prefix, suffix, node) 
 ```
 **To remove the output files after you are done:**
 ```{r}
 RemoveQsubTempFiles(sharedPathAn, prefix)
 ```
 
-***Note:***     
-Script below was not run - opted to to use EMBL format to generate feature table from the annotated gff3 files. Need to revisit and see how collaborators want to submit annotation, and to where - GenBank or EMBL. If they want to submit to GenBank, once I get the project number, and locus_tags from them, will need to revisit the genbank flatfile criteria as there are some hiccups with GAG that end up with annotations being lost and a lot more time to properly reintegrate them, using a combination of GAG, Annie, and tbl2asn.     
+CAZyme Annotation      
+README     
+Wed Jul 31 13:55:45 EDT 2019 README for CAZyme prediction on dbCAN2 webserver.     
+The protein fasta used for orthofinder prediction, colletoH109.singleline.fa was used as input.     
+The fasta file used the embl sequence names and locus tags format, but had no other annotation.     
+Now we need to see how the annotations can be added to the protein names, or somehow incorporated.     
+The dbCAN2 webserver url is: http://bcb.unl.edu/dbCAN2/blast.php     
+The following analyses were run:     
+HMMER (E-value < 1e-15, coverage > 0.35)     
+DIAMOND (E-value < 1e-102)     
+Hotpep (Frequency > 2.6, Hits > 6)     
+The results job ID is: 20190731124400     
+The overview results table was copied to a txt file in gedit named dbCAN_output.txt     
+The HMMER output was saved as hmm_output.txt     
+The Diamond output was saved to file as diamond_output.txt     
+The Hotpep output was saved to file as hotpep_output.txt     
 
-# Find errors in gff file with GAG:
+Read in the tables to format annotations:
 ```{r}
- # gag.py -f ../../../../References/colletotrichum/colleto_assembly_largeContigs.fixedNames.fasta -g ../colleto_H109_all.maker.gff3 --fix_start_stop -ris 10 --fix_terminal_ns -o .
-# mkdir tbl2asn
-# mv genome.tbl genome.tbl.bak; sed '/\t\t\tgene.*/d' genome.tbl.bak > genome.tbl
-# mv genome.tbl colleto_H109.tbl
-# mv genome.fasta colleto_H109.fsa
-# cp Lari_template.sbt tbl2asn/colleto_H109.sbt # and edit for colletotrichum
-# cp colleto_H109.* tbl2asn/
-# cd tbl2asn/
-# tbl2asn -j "[organism=Colletotrichum isolate H109] [strain=CGXH109]" -t colleto_H109.sbt -p. -M n -Z discrep -a r1k -c b -V b  
-```
+cazyOutDir <- paste(metadata$postMaker, "dbCAN", sep = "/")
+cazySumTbl <- paste(cazyOutDir, "dbCAN_output.txt", sep = "/")
+cazyHmmTbl <- paste(cazyOutDir, "hmm_output.txt", sep = "/")
+cazyDiaTbl <- paste(cazyOutDir, "diamond_output.txt", sep = "/")
+cazyHpeTbl <- paste(cazyOutDir, "hotpep_output.txt", sep = "/")
 
-
-### Generation of NCBI Submission Files with GAG - to validate and fix gff errors:  
-We can generate our genome submission files using the Genome Annotation Generator (GAG) prior to running BLAST and InterProScan.
-What we focus on from this are the validation and error files that are generated that will tell us all the gene features that are invalid, such as protein with internal stop detected, or incomplete gene or missing stop codn, etc., and we go through these and fix all the errors, re-run GAG iteratively until no more errors are present. Once all the errors are solved, then we use InterProscan and Blast and whatever else for annotation, and so don’t waste our time annotating invalid features. 
-```{r}
-metadata$gag1 <- paste(metadata$postMaker, "gag_1", sep = "/")
-dir.create(metadata$gag1, showWarnings = TRUE, recursive = FALSE)
-
-# Run GAG:
-cmd <- with(metadata, paste("cd ", gag1, " && ", gagPath, " -f ", assembly, " -g ", tidyGff3noseq,
-                            " --fix_start_stop -ris 10 -o . ", sep = ""))
-sapply(cmd, function(x) system(x))
-```
-
-
-
-$ mkdir gag; cd gag  
-$ python ~/prog/gag/genomeannotation-GAG-40ea515/gag.py -f ../../../Lcer_NCBI_files/Lcer_assembly_EG2017_mod.fna -g ../Lcer_rnd3.all.maker_jb.gff3 --fix_start_stop -ris 10 -o gag_pass1_fix_start_stop_short_introns  
-$ mv genome.tbl genome.tbl.bak; sed '/\t\t\tgene.*/d' genome.tbl.bak > genome.tbl 
-$ mv genome.tbl Lcer.tbl     
-$ mv genome.fasta Lcer.fsa   
-$ mkdir tbl2asn  
-$ cp ../../../../../template.sbt tbl2asn/Lcer_template.sbt
-$ cp L* tbl2asn/  
-$ cd tbl2asn   
-$ ~/prog/linux64.tbl2asn -j "[organism=LariEG1201] [strain=ABC 123]" -t Lcer_template.sbt -p. -M n -Z discrep -a r1k -c b -V b  
-$ cat errorsummary.val
-Fix the errors captured in this document.
-Run gag for a second round to make sure all the errors were fixed:
-```{r}
-prefix <- "gag_pass2"
-previousGagDir <- "gag_pass1_fix_start_stop_short_introns/"
-cmd    <- with(metadataAssemblies,
-               paste("cd ", paste(postMaker, "gag/", sep = ""), " && ",
-                     "python ", gagPath, " -f ", paste(postMaker, "gag/", previousGagDir, SppAbbrv, ".fsa", sep = ""),
-                     " -g ", paste(postMaker, "gag/", previousGagDir, "genome.edit.gff", sep = ""),
-                     " -o ", paste(postMaker, "gag/", "gag_pass2_eval", sep = ""), sep = ""))
-cmd[1]
-suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd, prefix, suffix)               
+library(data.table)
+cazySum <- fread(cazySumTbl, sep = "auto")
+cazyHmm <- fread(cazyHmmTbl, sep = "auto")
+cazyDia <- fread(cazyDiaTbl, sep = "auto")
+cazyHpe <- fread(cazyHpeTbl, sep = "auto")
 ```
 
 
