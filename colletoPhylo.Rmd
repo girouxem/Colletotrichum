@@ -1,5 +1,5 @@
 ---
-title: "Collettorichum_phylogeny"
+title: "Colletotrichum Phylogenomics Analysis"
 author: "Emily Giroux"
 date: "2023-01-30"
 output: html_document
@@ -9,27 +9,34 @@ urlcolor: blue
 header-includes: \usepackage{xcolor}
 ---
 
-## __Colletotrichum Phylogenomics Analysis__  
   
-#### __*Project Name Setting*__
-```{r}
-analysis <- "Colletotrichum_phylogeny"
-```
+<br>  
   
-#### __*Set up the project's global options*__  
-```{r, global_options, eval=TRUE, echo=FALSE, cache=TRUE}
+  
+<br>  
+  
+##### __Set up the project's global options__  
+```{r, global_options, eval=TRUE, cache=TRUE}
 library(knitr)
 opts_chunk$set(tidy.opts=list(width.cutoff=80), tidy = TRUE, fig.align='center',
-               cache=FALSE, collapse=TRUE, echo=FALSE, eval=FALSE, include=FALSE,
+               cache=TRUE, collapse=TRUE, echo=TRUE, eval=FALSE, include=FALSE,
                message=FALSE, quietly=TRUE, results='hide', warn.conflicts=FALSE, 
                warning=FALSE)
 ```
+    
+<br>  
   
-#### __*Project directory set-up*__  
-Use the rprojroot package to set the directory structures and create directories    
-that will be used throughout the script. The root object contains a function that    
-will help us locate our package R files regardless of our current working directory.
-```{r sourcing_my_functions, echo=FALSE, eval=TRUE, include=FALSE, cache=TRUE}
+##### __Project Name Setting__
+```{r, eval=FALSE, echo=1}
+analysis <- "Colletotrichum_phylogeny"
+```
+  
+  
+<br>  
+  
+##### __Project directory set-up__  
+Use the rprojroot package to set the directory structures and create directories that will be used throughout the script. The root object contains a function that will help us locate our package R files regardless of our current working directory.
+```{r, echo=1, eval=FALSE}
 library("rprojroot")
 root <- rprojroot::is_rstudio_project
 
@@ -66,9 +73,7 @@ for (j in 1:length(subfolder_names)){
   folder <- dir.create(paste0(databasePath, subfolder_names[j]), showWarnings = TRUE, recursive = FALSE)
 }
 
-# Create separate database directories for genomes of species outside main 
-# targets set, i.e., outgroups or other species within genus to improve phylogeny
-# tree resolution: 
+# Create separate database directories for genomes of species outside main targets set, i.e., outgroups or other species within genus to improve phylogeny tree resolution: 
 generaGenomes <- paste(databasePath, "all_genomes_under_target_genera", sep = "/")
 refSeqDBGenus <- paste(generaGenomes, "refSeq", sep = "/")
 gbDBGenus <- paste(generaGenomes, "genbank", sep = "/")
@@ -80,64 +85,83 @@ for (j in 1:length(subfolder_names)){
 # Create a directory to hold all the saved environment files:
 imagePath <- root$make_fix_file(".")(paste("r_environments", analysis, sep = "/"))
 dir.create(imagePath, showWarnings = TRUE, recursive = TRUE)
-images <- dir(root$find_file(imagePath, path = root$find_file())) # if there is already a data file in this directory if not running this for the first time
+images <- dir(root$find_file(imagePath, path = root$find_file())) # if data file already exists in this directory
 imagesList <- paste(imagePath, images, sep = "//")
 load(paste(imagesList, sep = "/")) # Need to be specific if multiple images are present.
 ```
+    
+<br>  
   
-#### __*Project environment quick-load*__  
-```{r}
+##### __Project environment quick-load__  
+```{r, echo=TRUE, eval=FALSE}
 library("rprojroot")
 root <- rprojroot::is_rstudio_project
 imagePath <- root$make_fix_file(".")(paste("r_environments", analysis, sep = "/"))
 imageA <- "colleto_phylo.RData" # should provide this variable in initial chunk where image directory is specified - but concern is that there may be the need to divide and create different files within the same anaylsis....
 save.image(paste(imagePath, imageA, sep = "/")) # you need to bget more specific if you have more than one image saved in this directory
 ```
+      
+<br>  
+
+#### __Project Steps:__  
+##### __1.__ Core project genomic information. Collect file location information for our primary 9 genomes.  
+##### __2.__ Extend genome data to include other Colletotrichum species, using curated reference genomes from RefSeq.  
+##### __4.__ If more genomic data is required, consider non-RefSeq data.  
+##### __3.__ Create phylogeny from all the available genomes gathered.     
+       
+<br>  
   
-### Project Steps:  
-#### 1. Core project genomic information. Collect file location information for our primary 9 genomes.  
-#### 2. Extend genome data to include other Colletotrichum species, using curated reference genomes from RefSeq.  
-#### 4. If more genomic data is required, consider non-RefSeq data.  
-#### 3. Create phylogeny from all the available genomes gathered.     
+##### __Step 1__  
   
-#### __Step 1__  
-  
-__*Collect paths to our personally-sequenced Colletotrichum genomes:*__  
+__Collect paths to our personally-sequenced Colletotrichum genomes:__  
 Import csv that has our reference genomes directory paths and shortnames.
-```{r}
+```{r, echo=TRUE, eval=FALSE}
 sequencedColletoGenomes <- read.csv(file = root$find_file("metadata_colletoMar2022.csv", path = root$find_file()))
 ```
-  
-#### __Step 2__  
-#####__Search for other quality Colletotrichum reference genomes available__  
-__*a)*__ Use nearest_genomes.py script to gather species taxIDs. First need to get TaxIDs
+      
+<br>  
+    
+##### __Step 2__  
+##### __Search for other quality Colletotrichum reference genomes available:__  
+__2.1__ Use nearest_genomes.py script to gather species taxIDs. First need to get TaxIDs
 of Colletotrichum species that have sequenced genomes. To get these, use the genus
 TaxID as a starting point and then use the nearest_genomes python script to retrieve species TaxIDs.
   
-__*b)*__ Use the species taxID information to gather additional information related to
+__2.2__ Use the species taxID information to gather additional information related to
 genomic data, i.e., assembly and accession info for genome data retrieval.  
   
-__*c)*__ Use the accessions or assembly IDs to retrieve genomic data using biomartr to retrieve data from on NCBI, RefSeq and Ensembl.  
+__2.3__ Use the accessions or assembly IDs to retrieve genomic data using biomartr to retrieve data from on NCBI, RefSeq and Ensembl.  
+    
+   
+<br>  
   
   
-__*Capture the Colletotrichum genus TaxID:*__
-```{r}
+##### __2.1 Gather Colletotrichum Species TaxIDs:__  
+  
+__Capture the Colletotrichum genus TaxID:__
+```{r, eval=FALSE, echo=TRUE}
 target <- "5455" # genus tax-id for Colletotrichum
 ```
   
-__*Prepare for function "nearest_genomes.py":*__  
-**Unlike the APS project, we don't have a list from a table to go through, but I made it like this in case an outgroup genus is to be added later.**
-```{r}
+__Prepare for function "nearest_genomes.py":__  
+*Note: Unlike the APS project, we don't have a list from a table to go through, but I made it like this in case an outgroup genus is to be added later.*
+```{r, echo=TRUE, eval=FALSE}
 library("data.table")
 generaList <- c("Colletotrichum") 
 nearestGensTbl <- as.data.table(generaList)
 ```
   
-__*Customize the nearest_genomes.py script to search using our target genus*__  
-```{r}
-library("reticulate")
+__Customize the nearest_genomes.py script to search using our target genus__
+  
+*At line 84 in nearest_genomes.py, replace "Aleurina" with the genus you want to seach, then __save it__:*
+```{r, echo=TRUE, eval=FALSE}
 nearestGenPyPath <- paste(scriptsPyPath, scriptsPy, sep = "//")
-# At line 84 in nearest_genomes.py, replace "Aleurina" with the genus you want to seach, then save.
+file.edit(nearestGenPyPath) # File will open in source pane where you can edit then save it.
+```
+  
+__Load the reticulate package to manipulate python code and use the nearest_genomes script:__
+```{r, echo=TRUE, eval=FALSE}
+library("reticulate")
 source_python(nearestGenPyPath)
 
 for(i in 1:nrow(nearestGensTbl)){
@@ -148,14 +172,10 @@ for(i in 1:nrow(nearestGensTbl)){
 nearestGensTbl <- nearestGensTbl[, .(accns = unlist(tstrsplit(accns, ",", type.convert = TRUE))), by = generaList]
 nearestGensTbl$accns <- sub(" ", "", nearestGensTbl$accns)
 ```
-  
-__*Save the environemnt image:*__
-```{r}
-save.image(paste(imagePath, imageA, sep = "/"))
-```
-
-Getting reference genomes available under the Colletotrichum genus, here we use Ensembl Genome Retrieval: (Run as background job)
-```{r}
+    
+__Get reference genomes available under the Colletotrichum genus, here we use Ensembl Genome Retrieval:__  
+*Note: Run as background job.*  
+```{r, echo=TRUE, eval=FALSE}
 library(biomartr)
 for(i in 1:nrow(nearestGensTbl)){
   biomartr::getGenomeSet(db = "ensembl", nearestGensTbl$accns[i], reference = FALSE, release = NULL,
@@ -202,14 +222,15 @@ for(i in 1:nrow(gbGens)){
 }
 ```
 
-Save env image:
-```{r}
+
+```{r, echo=FALSE, eval=FALSE}
+# Save the environment image:
 save.image(paste(imagePath, imageA, sep = "/"))
 ```
 
 
 Obtain genomes from all species within a genus available from database:
-```{r}
+```{r, echo=TRUE, eval=FALSE}
 getKingdoms(db = "refseq")
 getGroups(db = "refseq", kingdom = "fungi")
 ```
@@ -227,7 +248,7 @@ getGroups(db = "refseq", kingdom = "fungi")
 
 
 Need to obtain reference genomes for the target pathogens in the target Meta table:
-```{r}
+```{r, echo=TRUE, eval=FALSE}
 library("biomartr")
 # set default timeout setting from 60s to at least 3000000 s before running any retrieval functions:
 options(timeout = 30000000)
@@ -237,19 +258,20 @@ biomartr::listNCBIDatabases(db = "all")
 ```
 
 RefSeq Genome Check:
-```{r}
+```{r, echo=TRUE, eval=FALSE}
 library("biomartr")
 res <- biomartr::is.genome.available(db = "refseq", organism = "Colletotrichum", details = TRUE)
 # notice that the last 3 rows/entries are not from Colletotrichum genus, rather they are viral, so remove these from the table:
 res <- res[1:14,]
 ```
-Save env image:
-```{r}
+
+```{r, echo=FALSE, eval=FALSE}
+# Save the environment image:
 save.image(paste(imagePath, imageA, sep = "/"))
 ```
 
 
-```{r}
+```{r, echo=TRUE, eval=FALSE}
 # targetMeta$genRefSeq[i] <- res
 refSeqGens <- res
 refSeqGens$genRefSeq <- "TRUE"
@@ -260,7 +282,7 @@ for(i in 1:nrow(refSeqGens)){
 }
 ```
 RefSeq Genome Download of most recent version. Set up as a background job (Don't copy results - just double-check download folder has all genomes downloaded):
-```{r}
+```{r, echo=TRUE, eval=FALSE}
 options(timeout = 300000000)
 library(biomartr)
 for(i in 1:nrow(refSeqGens)){
@@ -275,25 +297,27 @@ for(i in 1:nrow(refSeqGens)){
 }
 ```
 
-Save env image:
-```{r}
+
+```{r, echo=FALSE, eval=FALSE}
+# Save the environment image:
 save.image(paste(imagePath, imageA, sep = "/"))
 ```
 
 GenBank Genome Check:
-```{r}
+```{r, echo=TRUE, eval=FALSE}
 library("biomartr")
 res <- biomartr::is.genome.available(db = "genbank", organism = "5455", details = TRUE)
 # notice that the last 3 rows/entries are not from Colletotrichum genus, rather they are viral, so remove these from the table:
 #res <- res[1:14,]
 ```
-Save env image:
-```{r}
+
+```{r, echo=FALSE, eval=FALSE}
+# Save the environment image:
 save.image(paste(imagePath, imageA, sep = "/"))
 ```
 
 
-```{r}
+```{r, echo=TRUE, eval=FALSE}
 # targetMeta$genRefSeq[i] <- res
 refSeqGens <- res
 refSeqGens$genRefSeq <- "TRUE"
@@ -304,7 +328,7 @@ for(i in 1:nrow(refSeqGens)){
 }
 ```
 RefSeq Genome Download of most recent version. Set up as a background job (Don't copy results - just double-check download folder has all genomes downloaded):
-```{r}
+```{r, echo=TRUE, eval=FALSE}
 options(timeout = 300000000)
 library(biomartr)
 for(i in 1:nrow(refSeqGens)){
@@ -319,13 +343,14 @@ for(i in 1:nrow(refSeqGens)){
 }
 ```
 
-Save env image:
-```{r}
+
+```{r, echo=FALSE, eval=FALSE}
+# Save the environment image:
 save.image(paste(imagePath, imageA, sep = "/"))
 ```
 
 Look at CAZyme distributions
-```{r}
+```{r, echo=TRUE, eval=FALSE}
 install.packages("readxl")
 library("readxl")
 cazyTblPath <- "/isilon/cfia-ottawa-fallowfield/users/girouxeml/PIRL_working_directory/Colletotrichum_phylogeny/CAZyme_prediction_result.xlsx"
@@ -333,6 +358,12 @@ cazyXLS <- read_excel(cazyTblPath)
 ```
 ```{r}
 
+```
+
+
+__*Save the environment image:*__
+```{r, echo=TRUE, eval=FALSE}
+save.image(paste(imagePath, imageA, sep = "/"))
 ```
 
 
