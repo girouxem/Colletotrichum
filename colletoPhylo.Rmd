@@ -17,7 +17,7 @@ header-includes: \usepackage{xcolor}
   
 ##### __Set up the project's global options__  
 ```{r, global_options, eval=TRUE, cache=TRUE}
-library(knitr)
+library("knitr")
 opts_chunk$set(tidy.opts=list(width.cutoff=80), tidy = TRUE, fig.align='center',
                cache=TRUE, collapse=TRUE, echo=TRUE, eval=FALSE, include=FALSE,
                message=FALSE, quietly=TRUE, results='hide', warn.conflicts=FALSE, 
@@ -98,7 +98,7 @@ library("rprojroot")
 root <- rprojroot::is_rstudio_project
 imagePath <- root$make_fix_file(".")(paste("r_environments", analysis, sep = "/"))
 imageA <- "colleto_phylo.RData" # should provide this variable in initial chunk where image directory is specified - but concern is that there may be the need to divide and create different files within the same anaylsis....
-save.image(paste(imagePath, imageA, sep = "/")) # you need to bget more specific if you have more than one image saved in this directory
+load(paste(imagePath, imageA, sep = "/")) # you need to bget more specific if you have more than one image saved in this directory
 ```
       
 <br>  
@@ -174,31 +174,90 @@ nearestGensTbl$accns <- sub(" ", "", nearestGensTbl$accns)
 ```
     
 __Get reference genomes available under the Colletotrichum genus, here we use Ensembl Genome Retrieval:__  
+  
+We'll use the package "biomartr" to retrieve genomic data from a couple of online databases.  
+ 
+<br>  
+  
+__Display all databases accessible to biomartr:__
+```{r, echo=TRUE, eval=FALSE}
+library("biomartr")
+biomartr::listNCBIDatabases(db = "all")
+# also try BarcodingR: https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.12682
+```
+  
+__Query the RefSeq, GenBank and EMBL databases for genome assembly availabilities:__
+```{r, echo=TRUE, eval=FALSE}
+library("biomartr")
+# set default timeout setting from 60s to at least 3000000 s before running any retrieval functions:
+options(timeout = 30000000)
+
+for(i in 1:nrow(nearestGensTbl)){
+  res1 <- biomartr::is.genome.available(db = "genbank", organism = nearestGensTbl$accns[i])
+  nearestGensTbl$genDB[i] <- res1
+  res2 <- biomartr::is.genome.available(db = "ensembl", organism = nearestGensTbl$accns[i])
+  nearestGensTbl$genEMBL[i] <- res2
+  res3 <- biomartr::is.genome.available(db = "refseq", organism = nearestGensTbl$accns[i])
+  nearestGensTbl$genRefSeq[i] <- res3
+}
+```
+__Prepare tables to fetch genomes:__  
+```{r}
+library("data.table")
+gbGens <- nearestGensTbl[nearestGensTbl$genDB == "TRUE",]
+ensemblGens <- nearestGensTbl[nearestGensTbl$genEMBL == "TRUE",]
+refSeqGens <- nearestGensTbl[nearestGensTbl$genRefSeq == "TRUE",]
+```
+
+__Fetch available genomes from GenBank, RefSeq and EMBL__  
 *Note: Run as background job.*  
 ```{r, echo=TRUE, eval=FALSE}
-library(biomartr)
-for(i in 1:nrow(nearestGensTbl)){
-  biomartr::getGenomeSet(db = "ensembl", nearestGensTbl$accns[i], reference = FALSE, release = NULL,
-                         clean_retrieval = TRUE, gunzip = FALSE, update = FALSE, path = ensemblDBGenus,
-                         assembly_type = "toplevel")
-    biomartr::getAssemblyStats(db = "ensembl", nearestGensTbl$accns[i], reference = FALSE, 
-                             type = "download", 
-                             path = ensemblDBGenus)
-  warnings()
-}
+library("biomartr")
 
-for(i in 1:nrow(nearestGensTbl)){
-  biomartr::getGenomeSet(db = "genbank", nearestGensTbl$accns[i], reference = FALSE, release = NULL,
+# GenBank genomes:
+options(timeout = 30000000)
+for(i in 1:nrow(gbGens)){
+  biomartr::getGenomeSet(db = "genbank", gbGens$accns[i], reference = FALSE, release = NULL,
                          clean_retrieval = TRUE, gunzip = FALSE, update = FALSE, path = gbDBGenus,
                          assembly_type = "toplevel")
-    biomartr::getAssemblyStats(db = "genbank", nearestGensTbl$accns[i], reference = FALSE, 
-                             type = "download", 
-                             path = gbDBGenus)
+  biomartr::getAssemblyStats(db = "genbank", gbGens$accns[i], reference = FALSE, 
+                             type = "download", path = gbDBGenus)
   warnings()
 }
+save.image(paste(imagePath, imageA, sep = "/"))
+
+# RefSeq genomes
+options(timeout = 30000000)
+for(i in 1:nrow(refSeqGens)){
+  biomartr::getGenomeSet(db = "refseq", refSeqGens$accns[i], reference = FALSE, release = NULL,
+                         clean_retrieval = TRUE, gunzip = FALSE, update = FALSE, path = refSeqDBGenus,
+                         assembly_type = "toplevel")
+  biomartr::getAssemblyStats(db = "refseq", refSeqGens$accns[i], reference = FALSE, 
+                             type = "download", path = refSeqDBGenus)
+  warnings()
+}
+save.image(paste(imagePath, imageA, sep = "/"))
+
+# EMBL genomes:
+options(timeout = 30000000)
+for(i in 1:nrow(gbGens)){
+  biomartr::getGenomeSet(db = "embl", ensemblGens$accns[i], reference = FALSE, release = NULL,
+                         clean_retrieval = TRUE, gunzip = FALSE, update = FALSE, path = ensemblDBGenus,
+                         assembly_type = "toplevel")
+  biomartr::getAssemblyStats(db = "embl", ensemblGens$accns[i], reference = FALSE, 
+                             type = "download", path = ensemblDBGenus)
+  warnings()
+}
+save.image(paste(imagePath, imageA, sep = "/"))
+```
+
+Reload the R environment since the last time it was saved it was via terminal as a background job:
+```{r, echo=TRUE, eval=FALSE}
+load(paste(imagePath, imageA, sep = "/"))
+```
 
 ### Over here!!!! 21Feb2023 - above failed to retrieve genomes in list under genus - need to see what is going on with the fucking code.
-
+```{r, echo=FALSE, eval=FALSE}
 for(i in 1:nrow(targetMeta)){
   res <- biomartr::is.genome.available(db = "genbank", organism = targetMeta$SpeciesName[i])
   targetMeta$genDB[i] <- res
@@ -210,7 +269,7 @@ for(i in 1:nrow(gbGens)){
   gbGens$assmblyAccn[i] <- res
 }
 
-library(biomartr)
+library("biomartr")
 for(i in 1:nrow(gbGens)){
   biomartr::getGenomeSet(db = "genbank", gbGens$SpeciesName[i], reference = FALSE, release = NULL,
                          clean_retrieval = TRUE, gunzip = FALSE, update = FALSE, path = gbDB,
@@ -284,7 +343,7 @@ for(i in 1:nrow(refSeqGens)){
 RefSeq Genome Download of most recent version. Set up as a background job (Don't copy results - just double-check download folder has all genomes downloaded):
 ```{r, echo=TRUE, eval=FALSE}
 options(timeout = 300000000)
-library(biomartr)
+library("biomartr")
 for(i in 1:nrow(refSeqGens)){
   biomartr::getGenomeSet(db = "refseq", refSeqGens$organism_name[i], reference = FALSE, release = NULL, 
                          clean_retrieval = TRUE, gunzip = FALSE, update = FALSE, path = refSeqDB, 
@@ -330,7 +389,7 @@ for(i in 1:nrow(refSeqGens)){
 RefSeq Genome Download of most recent version. Set up as a background job (Don't copy results - just double-check download folder has all genomes downloaded):
 ```{r, echo=TRUE, eval=FALSE}
 options(timeout = 300000000)
-library(biomartr)
+library("biomartr")
 for(i in 1:nrow(refSeqGens)){
   biomartr::getGenomeSet(db = "refseq", refSeqGens$organism_name[i], reference = FALSE, release = NULL, 
                          clean_retrieval = TRUE, gunzip = FALSE, update = FALSE, path = refSeqDB, 
