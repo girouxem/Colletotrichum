@@ -1,0 +1,310 @@
+---
+title: "Collettorichum_phylogeny"
+author: "Emily Giroux"
+date: "2023-01-30"
+output: html_document
+fontsize: 11pt
+geometry: margin=1in
+urlcolor: blue
+header-includes: \usepackage{xcolor}
+---
+
+
+```{r, global_options, eval=TRUE, echo=FALSE, cache=TRUE}
+library(knitr)
+opts_chunk$set(tidy.opts=list(width.cutoff=80), tidy = TRUE, fig.align='center',
+               cache=FALSE, collapse=TRUE, echo=FALSE, eval=FALSE, include=FALSE,
+               message=FALSE, quietly=TRUE, results='hide', warn.conflicts=FALSE, 
+               warning=FALSE)
+```
+Project Name Setting:
+```{r}
+analysis <- "Colletotrichum_phylogeny"
+```
+
+Source our custom R scripts:    
+For this we will use the rprojroot package to set the directory structures. This will help us when finding our files to source functions. We specify ours is an RStudio project. The root object contains a function that will help us locate our package R files regardless of our current working directory.
+```{r sourcing_my_functions, echo=FALSE, eval=TRUE, include=FALSE, cache=TRUE}
+library("rprojroot")
+root <- rprojroot::is_rstudio_project
+
+scriptsPath <- root$make_fix_file(".")("R")
+scripts  <- dir(root$find_file("R", path = root$find_file()))
+scriptsList <- paste(scriptsPath, scripts, sep = "//")
+lapply(scriptsList, source)
+
+scriptsPyPath <- root$make_fix_file(".")("pythonScripts")
+dir.create(scriptsPyPath, showWarnings = TRUE, recursive = TRUE)
+scriptsPy <- dir(root$find_file(scriptsPyPath, path = root$find_file()))
+scriptsPyList <- paste(scriptsPyPath, scriptsPy, sep = "//")
+
+imagePath <- root$make_fix_file(".")(paste("r_environments", analysis, sep = "/"))
+dir.create(imagePath, showWarnings = TRUE, recursive = TRUE)
+images <- dir(root$find_file(imagePath, path = root$find_file())) # if there is already a data file in this directory if not running this for the first time
+imagesList <- paste(imagePath, images, sep = "//")
+load(paste(imagesList, sep = "/")) # you need to bget more specific if you have more than one image saved in this directory
+```
+
+Record the path to the environment images directory:
+```{r importChptImage, echo=TRUE, eval=TRUE, include=FALSE, cache=TRUE}
+library("rprojroot")
+sharedPath <- root$make_fix_file(".")("PIRL_working_directory")
+dir.create(sharedPath, showWarnings = TRUE, recursive = TRUE)
+sharedPathDirs <- dir(root$find_file(sharedPath, path = root$find_file()))
+sharedPathAn <- paste(sharedPath, analysis, sep = "/")
+dir.create(sharedPathAn, showWarnings = TRUE, recursive = TRUE)
+
+databasePath <- root$make_fix_file(".")(paste("Databases", analysis, sep = "/"))
+dir.create(databasePath, showWarnings = TRUE, recursive = TRUE)
+databasesPathDir <- dir(root$find_file(databasePath, path = root$find_file()))
+
+refSeqDB <- paste(databasePath, "refSeq", sep = "/")
+gbDB <- paste(databasePath, "genbank", sep = "/")
+ensemblDB <- paste(databasePath, "ensembl", sep = "/")
+subfolder_names <- c("/refSeq", "/genbank", "/ensembl")
+for (j in 1:length(subfolder_names)){
+  folder <- dir.create(paste0(databasePath, subfolder_names[j]), showWarnings = TRUE, recursive = FALSE)
+}
+
+# species within genus genomes 
+generaGenomes <- paste(databasePath, "all_genomes_under_target_genera", sep = "/")
+refSeqDBGenus <- paste(generaGenomes, "refSeq", sep = "/")
+gbDBGenus <- paste(generaGenomes, "genbank", sep = "/")
+ensemblDBGenus <- paste(generaGenomes, "ensembl", sep = "/")
+for (j in 1:length(subfolder_names)){
+  folder <- dir.create(paste0(generaGenomes, subfolder_names[j]), showWarnings = TRUE, recursive = TRUE)
+}
+```
+
+```{r}
+imageA <- "colleto_phylo.RData" # should provide this variable in initial chunk where image directory is specified - but concern is that there may be the need to divide and create different files within the same anaylsis....
+save.image(paste(imagePath, imageA, sep = "/")) # you need to bget more specific if you have more than one image saved in this directory
+```
+
+Steps:    
+1. acquire 9 genomes of our strains - or set path to these, maybe also have a table    
+2. extend outwards to other colletotrichum species genomes, using curated reference genomes from refseq    
+3. create phylogeny from all the availabe genomes gathered    
+
+Import csv that has our reference genomes directory paths and shortnames:
+```{r}
+sequencedColletoGenomes <- read.csv(file = root$find_file("metadata_colletoMar2022.csv", path = root$find_file()))
+```
+
+Reference genomes to obtain for target species:
+```{r}
+target <- "5455" # genus tax-id for Colletotrichum
+```
+
+Try to collect all available Colletotrichum genomes, for all species under the Colletotrichum genus. Need to first use the genus TaxID to find the TaxIDs of all the available species.    
+Prepare for function "nearest_genomes.py":    
+```{r}
+library("data.table")
+generaList <- c("Colletotrichum") # unlike the APS project, we don't have a list from a table to go through, but I made it like this in case an outgroup genus is to be added later.
+nearestGensTbl <- as.data.table(generaList)
+```
+
+```{r}
+library("reticulate")
+nearestGenPyPath <- paste(scriptsPyPath, scriptsPy, sep = "//")
+# At line 84 in nearest_genomes.py, replace "Aleurina" with the genus you want to seach, then save.
+source_python(nearestGenPyPath)
+
+for(i in 1:nrow(nearestGensTbl)){
+  accns_r <- nearest_genomes(nearestGensTbl$generaList[i])
+  nearestGensTbl$accns[i] <- paste(accns_r, collapse = ", ")
+}
+
+nearestGensTbl <- nearestGensTbl[, .(accns = unlist(tstrsplit(accns, ",", type.convert = TRUE))), by = generaList]
+nearestGensTbl$accns <- sub(" ", "", nearestGensTbl$accns)
+```
+
+```{r}
+save.image(paste(imagePath, imageA, sep = "/"))
+```
+
+Getting reference genomes available under the Colletotrichum genus, here we use Ensembl Genome Retrieval: (Run as background job)
+```{r}
+library(biomartr)
+for(i in 1:nrow(nearestGensTbl)){
+  biomartr::getGenomeSet(db = "ensembl", nearestGensTbl$accns[i], reference = FALSE, release = NULL,
+                         clean_retrieval = TRUE, gunzip = FALSE, update = FALSE, path = ensemblDBGenus,
+                         assembly_type = "toplevel")
+    biomartr::getAssemblyStats(db = "ensembl", nearestGensTbl$accns[i], reference = FALSE, 
+                             type = "download", 
+                             path = ensemblDBGenus)
+  warnings()
+}
+
+for(i in 1:nrow(nearestGensTbl)){
+  biomartr::getGenomeSet(db = "genbank", nearestGensTbl$accns[i], reference = FALSE, release = NULL,
+                         clean_retrieval = TRUE, gunzip = FALSE, update = FALSE, path = gbDBGenus,
+                         assembly_type = "toplevel")
+    biomartr::getAssemblyStats(db = "genbank", nearestGensTbl$accns[i], reference = FALSE, 
+                             type = "download", 
+                             path = gbDBGenus)
+  warnings()
+}
+
+### Over here!!!! 21Feb2023 - above failed to retrieve genomes in list under genus - need to see what is going on with the fucking code.
+
+for(i in 1:nrow(targetMeta)){
+  res <- biomartr::is.genome.available(db = "genbank", organism = targetMeta$SpeciesName[i])
+  targetMeta$genDB[i] <- res
+}
+
+gbGens <- targetMeta[targetMeta$genDB == "TRUE",]
+for(i in 1:nrow(gbGens)){
+  res <- biomartr::is.genome.available(db = "genbank", organism = gbGens$SpeciesName[i], details = TRUE)
+  gbGens$assmblyAccn[i] <- res
+}
+
+library(biomartr)
+for(i in 1:nrow(gbGens)){
+  biomartr::getGenomeSet(db = "genbank", gbGens$SpeciesName[i], reference = FALSE, release = NULL,
+                         clean_retrieval = TRUE, gunzip = FALSE, update = FALSE, path = gbDB,
+                         assembly_type = "toplevel")
+    biomartr::getAssemblyStats(db = "genbank", gbGens$SpeciesName[i], reference = FALSE, 
+                             type = "download", 
+                             path = gbDB)
+  warnings()
+}
+```
+
+Save env image:
+```{r}
+save.image(paste(imagePath, imageA, sep = "/"))
+```
+
+
+Obtain genomes from all species within a genus available from database:
+```{r}
+getKingdoms(db = "refseq")
+getGroups(db = "refseq", kingdom = "fungi")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+Need to obtain reference genomes for the target pathogens in the target Meta table:
+```{r}
+library("biomartr")
+# set default timeout setting from 60s to at least 3000000 s before running any retrieval functions:
+options(timeout = 30000000)
+# List available database:
+biomartr::listNCBIDatabases(db = "all")
+# also try BarcodingR: https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.12682
+```
+
+RefSeq Genome Check:
+```{r}
+library("biomartr")
+res <- biomartr::is.genome.available(db = "refseq", organism = "Colletotrichum", details = TRUE)
+# notice that the last 3 rows/entries are not from Colletotrichum genus, rather they are viral, so remove these from the table:
+res <- res[1:14,]
+```
+Save env image:
+```{r}
+save.image(paste(imagePath, imageA, sep = "/"))
+```
+
+
+```{r}
+# targetMeta$genRefSeq[i] <- res
+refSeqGens <- res
+refSeqGens$genRefSeq <- "TRUE"
+# refSeqGens <- targetMeta[targetMeta$genRefSeq == "TRUE",]
+for(i in 1:nrow(refSeqGens)){
+  res <- biomartr::is.genome.available(db = "refseq", organism = refSeqGens$organism_name[i], details = TRUE)
+  refSeqGens$assmblyAccn[i] <- res
+}
+```
+RefSeq Genome Download of most recent version. Set up as a background job (Don't copy results - just double-check download folder has all genomes downloaded):
+```{r}
+options(timeout = 300000000)
+library(biomartr)
+for(i in 1:nrow(refSeqGens)){
+  biomartr::getGenomeSet(db = "refseq", refSeqGens$organism_name[i], reference = FALSE, release = NULL, 
+                         clean_retrieval = TRUE, gunzip = FALSE, update = FALSE, path = refSeqDB, 
+                         assembly_type = "toplevel")
+  biomartr::getAssemblyStats(db = "refseq", refSeqGens$organism_name[i], reference = FALSE, 
+                             type = "download", 
+                             #path = paste(refSeqDB, "/genomeassembly_stats", sep = ""))
+                             path = refSeqDB)
+  warnings()
+}
+```
+
+Save env image:
+```{r}
+save.image(paste(imagePath, imageA, sep = "/"))
+```
+
+GenBank Genome Check:
+```{r}
+library("biomartr")
+res <- biomartr::is.genome.available(db = "genbank", organism = "5455", details = TRUE)
+# notice that the last 3 rows/entries are not from Colletotrichum genus, rather they are viral, so remove these from the table:
+#res <- res[1:14,]
+```
+Save env image:
+```{r}
+save.image(paste(imagePath, imageA, sep = "/"))
+```
+
+
+```{r}
+# targetMeta$genRefSeq[i] <- res
+refSeqGens <- res
+refSeqGens$genRefSeq <- "TRUE"
+# refSeqGens <- targetMeta[targetMeta$genRefSeq == "TRUE",]
+for(i in 1:nrow(refSeqGens)){
+  res <- biomartr::is.genome.available(db = "refseq", organism = refSeqGens$organism_name[i], details = TRUE)
+  refSeqGens$assmblyAccn[i] <- res
+}
+```
+RefSeq Genome Download of most recent version. Set up as a background job (Don't copy results - just double-check download folder has all genomes downloaded):
+```{r}
+options(timeout = 300000000)
+library(biomartr)
+for(i in 1:nrow(refSeqGens)){
+  biomartr::getGenomeSet(db = "refseq", refSeqGens$organism_name[i], reference = FALSE, release = NULL, 
+                         clean_retrieval = TRUE, gunzip = FALSE, update = FALSE, path = refSeqDB, 
+                         assembly_type = "toplevel")
+  biomartr::getAssemblyStats(db = "refseq", refSeqGens$organism_name[i], reference = FALSE, 
+                             type = "download", 
+                             #path = paste(refSeqDB, "/genomeassembly_stats", sep = ""))
+                             path = refSeqDB)
+  warnings()
+}
+```
+
+Save env image:
+```{r}
+save.image(paste(imagePath, imageA, sep = "/"))
+```
+
+Look at CAZyme distributions
+```{r}
+install.packages("readxl")
+library("readxl")
+cazyTblPath <- "/isilon/cfia-ottawa-fallowfield/users/girouxeml/PIRL_working_directory/Colletotrichum_phylogeny/CAZyme_prediction_result.xlsx"
+cazyXLS <- read_excel(cazyTblPath)
+```
+```{r}
+
+```
+
+
+##################################################### OLD CODE NOT USED ANYMORE #######################
+
+

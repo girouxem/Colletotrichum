@@ -1,0 +1,268 @@
+---
+title: "colletorichum_2022"
+output: html_document
+---
+
+```{r, global_options, eval=TRUE, echo=FALSE, cache=TRUE}
+library("knitr")
+opts_chunk$set(tidy.opts=list(width.cutoff = 80), tidy = TRUE, fig.align = 'center',
+               cache = FALSE, collapse = TRUE, echo = FALSE, eval = FALSE, include = FALSE,
+               message = FALSE, quietly = TRUE, results = 'hide', warn.conflicts = FALSE, 
+               warning = FALSE)
+```
+
+**Using package `BiocManager` to install required packages:**
+```{r, biocInstall, eval=TRUE, echo=TRUE, include=TRUE, cache=TRUE, tidy=FALSE, message=FALSE}
+r <- getOption("repos")
+r["CRAN"] <- "http://cran.us.r-project.org"
+options(repos = r)
+
+if (!requireNamespace("BiocManager"))
+    install.packages("BiocManager")
+BiocManager::install()
+
+library("BiocManager")
+.cran_packages <- c("cowplot", "data.table", "ggplot2", "knitr", "rprojroot")
+.bioc_packages <- c("BiocStyle", "Biostrings", "dada2", "ShortRead")
+.inst <- .cran_packages %in% installed.packages()
+if(any(!.inst)) {
+   install.packages(.cran_packages[!.inst])
+}
+.inst <- .bioc_packages %in% installed.packages()
+if(any(!.inst)) {
+  BiocManager::install(.bioc_packages[!.inst], ask = FALSE)
+}
+```
+**Load packages into session, and print package versions:**
+```{r, showBiocPackages, echo=TRUE, eval=TRUE, include=TRUE, results='hold', cache=TRUE}
+sapply(c(.cran_packages, .bioc_packages), require, character.only = TRUE)
+```
+
+```{r sourcing_my_functions, echo=FALSE, eval=TRUE, include=FALSE, cache=TRUE}
+#Source our custom R scripts:    
+#For this we will use the rprojroot package to set the directory structures. This will help us when finding our files to source functions. We specify ours is an RStudio project. The root object contains a function that will help us locate our package R files regarless of our current working directory.
+library("rprojroot")
+root <- rprojroot::is_rstudio_project
+scriptsPath <- root$make_fix_file(".")("R")
+scripts  <- dir(root$find_file("R", path = root$find_file()))
+scriptsl <- paste(scriptsPath, scripts, sep = "//")
+lapply(scriptsl, source)
+# Record the path to the environment images directory:
+sharedPath <- "/isilon/cfia-ottawa-fallowfield/users/girouxeml/PIRL_working_directory/"
+analysis <- "Colletotrichum_2022/"
+sharedPathAn <- paste(sharedPath, analysis, sep = "")
+imageDirPath <- "/home/CFIA-ACIA/girouxeml/GitHub_Repos/r_environments/colletotrichum2022/"
+chptImageA   <- "colletotrichum2022.RData"
+```
+**Save the new image**
+```{r, loadBaseImage, echo=TRUE, eval=FALSE, include=TRUE, results='hold'}
+save.image(paste(imageDirPath, chptImageA, sep = ""))
+```
+
+When re-starting a session, you can quickly load up the image by running the chunk below:
+```{r, quickImageLoad, echo=TRUE, eval=TRUE, include=TRUE, results='hold'}
+sharedPath <- "/isilon/cfia-ottawa-fallowfield/users/girouxeml/PIRL_working_directory/"
+analysis <- "Colletotrichum_2022/"
+sharedPathAn <- paste(sharedPath, analysis, sep = "/")
+imageDirPath <- "/home/CFIA-ACIA/girouxeml/GitHub_Repos/r_environments/colletotrichum2022/"
+chptImageA   <- "colletotrichum2022.RData"
+load(paste(imageDirPath, chptImageA, sep = ""))
+```
+
+
+**Read in the metadata table:**  
+We need to specify where we put the assembly files for our genomes. We had this in our metadataAssembly table 
+from our previous script we ran called "RstudioScript-June2017_LachnellulaSpp_assemblies.Rmd"
+We can either read in the table, or take what we have from the environment. Reading in the table is better.
+```{r}
+library(data.table)
+metadata <- data.table::fread(paste(sharedPathAn, "metadata_colletoMar2022.csv", sep = "/"),
+                  sep = "auto", header = TRUE)
+metadata$contigsName <- paste(metadata$shortName, ".contigs.fsa", sep = "")
+metadata$cdsName     <- paste(metadata$shortName, ".cds-transcripts.fa", sep = "")
+metadata$mrnaName    <- paste(metadata$shortName, ".mrna-transcripts.fa", sep = "")
+metadata$protName    <- paste(metadata$shortName, ".proteins.fa", sep = "")
+metadata$gff3Name    <- paste(metadata$shortName, ".gff3", sep = "")
+metadata$gbkName     <- paste(metadata$shortName, ".gbk", sep = "") # note none yet for H109
+metadata$scafName    <- paste(metadata$shortName, ".scaffolds.fa", sep = "") # note none yet for H109
+metadata$emblName    <- paste(metadata$shortName, ".embl", sep = "") # only for H109
+
+metadata$gbkName[9] <- "NoneAvailable"
+metadata$scafName[9] <- "NoneAvailable"
+metadata$emblName[1:8] <- "NoneAvailable"
+```
+Colletotrichum_COL_26b.mrna-transcripts.fa
+
+
+If all is good, we may want to get a fresh summary of the quality of our assembly and annotation. We can use BUSCO for this:
+**iii. Run BUSCO using the Augustus species HMM to look at the results:**  
+We can run BUSCO using the Augustus species HMM we obtained, without having to train Augustus. Only include the 
+transcript sequences, and not the 1000 bp on each side, and be sure to take the best (i.e., longest) transcript for
+each gene so we aren't artificially seeding duplicates. We could also run it on the best protein sequence per gene
+instead.  
+```{r}
+prefix <- "eval_with_Busco2"
+node   <- 10
+cmd    <- with(metadata,
+               paste("conda activate buscoenv && cd ", sharedPathAn, " && ",
+                     " busco ", " -i ", paste(metadata$dirFullPath, "/", metadata$contigsName, sep = ""),
+                     " -o ", paste("annotation_eval_", metadata$shortName,sep = ""), " -c ", node,
+                     " -l /isilon/cfia-ottawa-fallowfield/users/girouxeml/PIRL_working_directory/Colletotrichum_2022/busco_downloads/lineages/fungi_odb10/", 
+                     " -m transcriptome ",
+                     " --restart  --force ", 
+                     " && conda deactivate", sep = ""))
+cmd[2]
+suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd, prefix, suffix, node)
+# Note, if the run fails, restart the run with the following "--restart", it will continue from where it left off. However, check the 
+# config.ini file in ~/prog/busco/config/ to make sure that restart is set to True, and that you adjust to the correct cpus number.
+# qsub -pe smp 14 -cwd -S /bin/bash eval_with_Busco1.sub
+```
+
+
+Sequencing coverage analysis:
+Genome sequencing coverage was determined directly using BBMap/BBTools (v.38.23) tool by mapping the processed reads against the Newbler assembly fasta used as reference (Bushnell 2014, Bushnell 2018):
+```{r}
+#$ bbmap.sh in=reads.fq ref=reference.fasta nodisk covstats=stats.txt covhist=histogram.txt
+prefix <- "coverageBBmap"
+cmd    <- with(metadata,
+               paste("conda activate buscoenv && cd ", sharedPathAn, " && ",
+                     " bbmap.sh ", " in=", paste(metadata$dirFullPath, "/", metadata$contigsName, sep = ""),
+                     " nodisk covstats= ", paste("covstats_", metadata$shortName, ".txt", sep = ""), 
+                     " covhist=", paste("covhist_", metadata$shortName, ".txt", sep = ""),
+                     " && conda deactivate", sep = ""))
+cmd[2]
+suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd, prefix, suffix, node)
+# Note, if the run fails, restart the run with the following "--restart", it will continue from where it left off. However, check the 
+# config.ini file in ~/prog/busco/config/ to make sure that restart is set to True, and that you adjust to the correct cpus number.
+# qsub -pe smp 14 -cwd -S /bin/bash eval_with_Busco1.sub
+
+cmd <- paste("conda activate buscoenv && bbmap.sh --help && conda deactivate")
+system2("/isilon/cfia-ottawa-fallowfield/users/girouxeml/prog/anaconda3/envs/buscoenv/bin/bbmap.sh", args = "--help")
+system(cmd)
+```
+
+
+
+
+
+
+
+
+
+
+**Prepare for post-MAKER processing***
+```{r}
+for(k in 1:nrow(metadataAssemblies)){
+    dir.create(paste(metadataAssemblies$RepeatDBPath[k], "postMakerProcessing", sep = ""), showWarnings = TRUE, recursive = FALSE)}
+metadataAssemblies$postMaker <- paste(metadataAssemblies$RepeatDBPath, "postMakerProcessing/", sep = "")
+
+for(k in 1:nrow(metadataAssemblies)){
+    dir.create(paste(metadataAssemblies$RepeatDBPath[k], "postMakerProcessing/gag", sep = ""), showWarnings = TRUE, recursive = FALSE)}
+metadataAssemblies$postMakerGAG <- paste(metadataAssemblies$RepeatDBPath, "postMakerProcessing/gag/", sep = "")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+**Define path variables to programs and scripts used:**
+```{r}
+# Biocluster system-wide programs:
+augustBioCPath  <- "/isilon/biodiversity/pipelines/maker-2.10/augustus.2.7/bin/augustus"
+augEvalBioCPath <- "/isilon/biodiversity/pipelines/maker-2.10/augustus.2.7/bin/augustus"
+bedtoolsPath    <- "/opt/bio/BEDTools/bin/bedtools"
+blastallPath    <- "/opt/bio/ncbi/bin/blastall"
+etrainBioCPath  <- "/isilon/biodiversity/pipelines/maker-2.10/augustus.2.7/bin/etraining"
+newSpeciesPath  <- "/isilon/biodiversity/pipelines/maker-2.10/augustus.2.7/scripts/new_species.pl"
+optimAugustPath <- "/isilon/biodiversity/pipelines/maker-2.10/augustus.2.7/scripts/optimize_augustus.pl"
+pathtRNA_scan   <- "/opt/bio/tRNAscan-SE/bin/tRNAscan-SE"
+randomSplitPath <- "/isilon/biodiversity/pipelines/maker-2.10/augustus.2.7/scripts/randomSplit.pl"
+
+# *** Revisit this organization. Perhaps best that all programs be /home/ and databases be in local cfia-ottawa?
+# CFIA-ACIA users home directory programs:
+progPath        <- "/isilon/cfia-ottawa-fallowfield/users/girouxeml/prog/"
+# aedCDFgenePath  <- paste(progPath, "scripts_pl/AED_cdf_generator.pl", sep = "")
+# blastpPath      <- paste(progPath, "miniconda/bin/blastp", sep = "")
+#buscoPath       <- paste(progPath, "busco/scripts/run_BUSCO.py", sep = "")
+# fathomPath      <- paste(progPath, "snap/fathom", sep = "")
+# forgePath       <- paste(progPath, "snap/forge", sep = "")
+# gagPath         <- paste(progPath, "gag/genomeannotation-GAG-40ea515/gag.py", sep = "")
+# genemarkPath    <- paste(progPath, "genemark-es/gmes_petap.pl", sep = "") 
+# hmmAssemPath    <- paste(progPath, "snap/hmm-assembler.pl", sep = "") 
+# iprUpdateMaker  <- paste(progPath, "maker/bin/ipr_update_gff", sep = "")
+# iprscan2gff3    <- paste(progPath, "maker/bin/iprscan2gff3", sep = "")
+# jbrowseFlatfile2json <- paste(progPath, "jbrowse/JBrowse-1.12.3/bin/flatfile-to-json.pl", sep = "")
+# jbrowsePrepRefsSeqsPath <- paste(progPath, "jbrowse/JBrowse-1.12.3/bin/prepare-refseqs.pl", sep = "") 
+# makerDatMapPath <- paste(progPath, "maker/bin/map_data_ids", sep = "")
+# makerMapFasta   <- paste(progPath, "maker/bin/map_fasta_ids", sep = "")
+# makerFastamerge <- paste(progPath, "maker/bin/fasta_merge", sep = "") 
+# makerFuncFasta  <- paste(progPath, "maker/bin/maker_functional_fasta", sep = "") 
+# makerFuncGff    <- paste(progPath, "maker/bin/maker_functional_gff", sep = "")
+# makerGFF3merge  <- paste(progPath, "maker/bin/gff3_merge", sep = "") 
+# makerIPR2gff3   <- paste(progPath, "maker/bin/iprscan2gff3", sep = "")
+# makerIPRupdate  <- paste(progPath, "maker/bin/ipr_update_gff", sep = "")
+# makerMapGffPath <- paste(progPath, "maker/bin/map_gff_ids", sep = "")
+# makerMapPath    <- paste(progPath, "maker/bin/maker_map_ids", sep = "")
+# makerPath       <- paste(progPath, "maker/bin/maker", sep = "") 
+# maker2zffPath   <- paste(progPath, "maker/bin/maker2zff", sep = "") 
+# pathtRNA_scan   <- paste(progPath, "tRNAscan-SE/bin/tRNAscan-SE", sep = "") 
+# processRepeatsPath <- paste(progPath, "RepeatMasker/ProcessRepeats", sep = "") 
+# repMaskerPath   <- paste(progPath, "RepeatMasker/RepeatMasker", sep = "") 
+# repModBuildDBPath  <- paste(progPath, "RepeatModeler-open-1.0.11/BuildDatabase", sep = "") 
+# repModlerPath   <- paste(progPath, "RepeatModeler-open-1.0.11/RepeatModeler", sep = "") 
+# rmOutToGFF3Path <- paste(progPath, "RepeatMasker/util/rmOutToGFF3.pl", sep = "")
+# tbl2asnPath     <- paste(progPath, "linux64.tbl2asn", sep = "")
+# scriptsPath     <- paste(progPath, "scripts_pl/", sep = "")
+# fixGAGNamePath  <- paste(scriptsPath, "fix_GAG_Name.sh", sep = "")
+# zff2augGbkPath   <- paste(scriptsPath, "zff2augustus_gbk.pl", sep = "")
+
+# CFIA-Ottawa-Fallowfield user directory programs:
+# buscoPezDataSet <- paste(programsPath, "busco_datasets/pezizomycotina_odb9/", sep = "")
+buscoFungiDataSet <- paste(progPath, "busco_datasets/fungi_odb9/", sep = "")
+# interproPath    <- paste(programsPath, "my_interproscan/interproscan-5.24-63.0/interproscan.sh", sep = "")
+# uniProtSwissPDB <- paste(programsPath, "databases/uniprot_sprot.fasta", sep = "")
+```
+
+**Define paths to reference files used:**  
+**Note,** require entire proteome from a  min of two related species and perhaps all of UniProt/SwissProt. 
+See advice for multiple proteomes for homology: https://groups.google.com/forum/#!topic/maker-devel/jbBm_4ycFU8
+  
+**_Marssonina brunnea_** available at: https://www.ncbi.nlm.nih.gov/genome/?term=txid698440[orgn]:
+ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/298/775/GCA_000298775.1_ASM29877v1  
+  
+For **_Sclerotinia sclerotiorum_**: https://www.ncbi.nlm.nih.gov/genome/?term=txid5180[orgn]   
+  
+All others available from ensemble. Retrieved them based on filtering:  
+*http://www.uniprot.org/proteomes/?query=reference%3Ayes+AND+taxonomy%3A%22Eukaryota+%5B2759%5D%22+AND+taxonomy%3AHelotiales&sort=score*
+```{r}
+referencesPath  <- paste(sharedPath, "References/", sep = "")
+cdnaBotcinPath  <- paste(referencesPath, "Botrytis_cinerea.ASM83294v1.cdna.all.fa", sep = "")
+gff3BotcinPath  <- paste(referencesPath, "Botrytis_cinerea.ASM83294v1.37.gff3", sep = "")
+pepBotcinPath   <- paste(referencesPath, "Botrytis_cinerea.ASM83294v1.pep.all.fa", sep = "")
+pepBotcinT4Path <- paste(referencesPath, "Botrytis_cinerea_t4.BotFuc_Mar2011.pep.all.fa", sep = "")
+pepGlarlozPath  <- paste(referencesPath, "Glarea_lozoyensis_atcc_20868.GLAREA.pep.all.fa", sep = "")
+pepMarbrunPath  <- paste(referencesPath, "Marsonnina_brunnea_GCA_000298775.1_ASM29877v1_protein.faa", sep = "")
+pepPhiascoPath  <- paste(referencesPath, "Phialocephala_scopiformis.Phisc1.pep.all.fa", sep = "")
+pepPhiasubPath  <- paste(referencesPath, "Phialocephala_subalpina.PAC_version_1.pep.all.fa", sep = "")
+pepRhyncomPath  <- paste(referencesPath, "Rhynchosporium_commune.version_1.pep.all.fa", sep = "")
+pepScleborPath  <- paste(referencesPath, "Sclerotinia_borealis_f_4128.SBOR_1.pep.all.fa", sep = "")
+pepSclerscPath  <- paste(referencesPath, "Scerotinia_sclerotiorum_GCF_000146945.2_ASM14694v2_protein.faa", sep = "")
+```
+
