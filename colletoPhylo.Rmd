@@ -169,7 +169,7 @@ for(i in 1:nrow(nearestGensTbl)){
   nearestGensTbl$accns[i] <- paste(accns_r, collapse = ", ")
 }
 
-nearestGensTbl <- nearestGensTbl[, .(accns = unlist(tstrsplit(accns, ",", type.convert = TRUE))), by = generaList]
+nearestGensTbl <- nearestGensTbl[, .(accns = unlist(data.table::tstrsplit(accns, ",", type.convert = TRUE))), by = generaList]
 nearestGensTbl$accns <- sub(" ", "", nearestGensTbl$accns)
 ```
     
