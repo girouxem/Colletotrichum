@@ -1,0 +1,146 @@
+---
+title: "OrthoFinder"
+author: "Emily Giroux"
+date: "5/28/2018"
+output: html_document
+---
+
+**Getting started in R:** 
+Set the working directory > setwd("~/") Check version installed
+```{r global_options, include=FALSE}
+library(knitr)
+opts_chunk$set(tidy.opts=list(width.cutoff=60), tidy = TRUE, fig.align='center')
+```
+
+**This will help us when finding our files to source functions:**
+```{r sourcing_my_functions}
+install.packages("rprojroot")
+library(rprojroot)
+# We specify ours is an RStudio project
+# The root object contains a function that will help us locate our package r files regardless of our current working directory
+root <- rprojroot::is_rstudio_project
+scriptsPath <- root$make_fix_file(".")("R")
+scripts  <- dir(root$find_file("R", path = root$find_file()))
+scriptsl <- paste(scriptsPath, scripts, sep = "//")
+lapply(scriptsl, source)
+```
+
+**Packages to install and have ready for later analyses:**
+```{r}
+install.packages("data.table")
+```
+
+**User: Define the path to the shared folder where the main working directory will be.**
+```{r setting_the_main_directory, cache=TRUE}
+sharedPath <- "/isilon/cfia-ottawa-fallowfield/users/girouxeml/PIRL_working_directory/"
+```
+
+**Define where the analysis path is, or the path to the current project:**
+```{r setting_the_main_directory, cache=TRUE}
+analysisOrtho     <- "Lachnellula_species_GenomeAn_IonTorrent_2017/"
+sharedPathAnOrtho <- paste(sharedPath, analysisOrtho, sep="")
+```
+
+**Define path variables to programs and scripts used:**
+```{r}
+# Biocluster system-wide programs:
+bedtoolsPath    <- "/opt/bio/BEDTools/bin/bedtools"
+blastallPath    <- "/opt/bio/ncbi/bin/blastall"
+
+# *** Revisit this organization. Perhaps best that all programs be /home/ and databases be in local cfia-ottawa?
+# CFIA-ACIA users home directory programs:
+progPath        <- "/home/CFIA-ACIA/girouxeml/prog/"
+blastpPath      <- paste(progPath, "miniconda/bin/blastp", sep = "")
+buscoPath       <- paste(progPath, "busco/scripts/run_BUSCO.py", sep = "")
+jbrowseFlatfile2json <- paste(progPath, "jbrowse/JBrowse-1.12.3/bin/flatfile-to-json.pl", sep = "")
+jbrowsePrepRefsSeqsPath <- paste(progPath, "jbrowse/JBrowse-1.12.3/bin/prepare-refseqs.pl", sep = "") 
+scriptsPath     <- paste(progPath, "scripts_pl/", sep = "")
+orthoFinderPath <- paste(progPath, "OrthoFinder-2.2.6/orthofinder", sep = "")
+# CFIA-Ottawa-Fallowfield user directory programs:
+programsPath    <- "/isilon/cfia-ottawa-fallowfield/users/girouxeml/prog/"
+```
+
+**Define paths to reference files used:**  
+```{r}
+referencesPath  <- paste(sharedPath, "References/", sep = "")
+cdnaBotcinPath  <- paste(referencesPath, "Botrytis_cinerea.ASM83294v1.cdna.all.fa", sep = "")
+gff3BotcinPath  <- paste(referencesPath, "Botrytis_cinerea.ASM83294v1.37.gff3", sep = "")
+pepBotcinPath   <- paste(referencesPath, "Botrytis_cinerea.ASM83294v1.pep.all.fa", sep = "")
+pepBotcinT4Path <- paste(referencesPath, "Botrytis_cinerea_t4.BotFuc_Mar2011.pep.all.fa", sep = "")
+pepGlarlozPath  <- paste(referencesPath, "Glarea_lozoyensis_atcc_20868.GLAREA.pep.all.fa", sep = "")
+pepMarbrunPath  <- paste(referencesPath, "Marsonnina_brunnea_GCA_000298775.1_ASM29877v1_protein.faa", sep = "")
+pepPhiascoPath  <- paste(referencesPath, "Phialocephala_scopiformis.Phisc1.pep.all.fa", sep = "")
+pepPhiasubPath  <- paste(referencesPath, "Phialocephala_subalpina.PAC_version_1.pep.all.fa", sep = "")
+pepRhyncomPath  <- paste(referencesPath, "Rhynchosporium_commune.version_1.pep.all.fa", sep = "")
+pepScleborPath  <- paste(referencesPath, "Sclerotinia_borealis_f_4128.SBOR_1.pep.all.fa", sep = "")
+pepSclerscPath  <- paste(referencesPath, "Scerotinia_sclerotiorum_GCF_000146945.2_ASM14694v2_protein.faa", sep = "")
+```
+
+Start orthoFinder from scratch on a set of protein fasta files from different species, saved to a directory:
+```{r}
+prefix <- "Test2_OrthoFinder"
+
+orthoAnalysisPath <- paste(sharedPathAnOrtho, "orthofinderAnalysis/", sep = "")
+pathProtFasOrtho  <- paste(orthoAnalysisPath, "proteinFasta_descriptive/protein", sep = "")
+node <- 20
+threadsAnalysis <- 20
+nameResultsDir <- "test1"
+
+cmd <- paste("cd ", orthoAnalysisPath, " && ", orthoFinderPath,
+             " -t ", node, " -a ", threadsAnalysis, " -M msa ",
+             " -n ", nameResultsDir, 
+             " -f ", pathProtFasOrtho, sep = "")
+cmd
+suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd, prefix, suffix, node) 
+```
+**To remove the output files after you are done:**
+```{r}
+RemoveQsubTempFiles(sharedPathAn, prefix)
+```
+
+Start OrthoFinder from a later point, after an analysis has been done and Blast databases already made:
+```{r}
+prefix <- "Test1_OrthoFinderMSATrees"
+node   <- 20
+threadsAnalysis <- 20
+previousResultsDir  <- "Results_test1_May24"
+previousResultsPath <- paste(pathProtFasOrtho, previousResultsDir, sep = "")
+
+cmd <- paste("cd ", previousResultsPath, " && ", orthoFinderPath,
+             " -t ", node, " -a ", threadsAnalysis, " -M msa -fg . ", sep = "")
+cmd
+suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd, prefix, suffix, node) 
+```
+For some reason, specifying nodes in the qsub doesn't end up using more than 1 node, despite directing it to do so.  
+However, running this directly in the directory with the bash files does:  
+
+qsub -pe smp 20 -cwd -S /bin/bash "name of bash file"  
+  
+Note that the temp .e and .o files will be written to the home directory and will need to be cleaned up from there.
+
+
+Read inthe csv file that has the single copy orthogroups list with gene names:
+```{r}
+orthoList <- paste(pathProtFasOrtho, "Results_test1_May24/orthoFinder_singleCopy_subset.csv", sep = "")
+orthoListTbl <- fread(file = orthoList, sep = "auto", header = FALSE, data.table = TRUE)
+```
+
+Will need to retrieve the genes, not the proteins. For marker development we will be testing on DNA, not RNA, and primers
+designed across intron/exon boundaries need to be avoided. 
+
+Using Hai's orthofinder pipeline. Use genbank_to_fasta on the genbank .gbf files:  
+$ ~/prog/genbank_to_fasta/genbank_to_fasta_v1.2/genbank_to_fasta.py -i Lari.gbf -m genbank -s nt -f CDS -d pipe -q '"ncbi","Lachnellula_arida",product,locus_tag'  
+$ sed -i 's/missing_"ncbi"_qualifer/ncbi/g' L*.fasta  
+$ sed -i 's/ /_/g' L*.fasta  
+$ sed -i 's/missing_"//g' L*.fasta  
+$ sed -i 's/"_qualifer//g' L*.fasta  
+
+$ for file in ./L*.gbf  
+> do 
+> ~/prog/genbank_to_fasta/genbank_to_fasta_v1.2/genbank_to_fasta.py -i "$file" -m genbank -s nt -f CDS -d pipe -q 'locus_tag'
+> done
+
+
+
+
+

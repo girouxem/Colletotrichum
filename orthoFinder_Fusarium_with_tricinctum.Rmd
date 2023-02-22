@@ -1,0 +1,191 @@
+---
+title: "OrthoFinder"
+author: "Emily Giroux"
+date: "5/28/2018"
+output: html_document
+---
+
+**Getting started in R:** 
+Set the working directory > setwd("~/") Check version installed
+```{r global_options, include=FALSE}
+library(knitr)
+opts_chunk$set(tidy.opts=list(width.cutoff=60), tidy = TRUE, fig.align='center')
+```
+
+**This will help us when finding our files to source functions:**
+```{r sourcing_my_functions}
+install.packages("rprojroot")
+library(rprojroot)
+# We specify ours is an RStudio project
+# The root object contains a function that will help us locate our package r files regardless of our current working directory
+root <- rprojroot::is_rstudio_project
+scriptsPath <- root$make_fix_file(".")("R")
+scripts  <- dir(root$find_file("R", path = root$find_file()))
+scriptsl <- paste(scriptsPath, scripts, sep = "//")
+lapply(scriptsl, source)
+```
+
+**Packages to install and have ready for later analyses:**
+```{r}
+install.packages("data.table")
+```
+
+**User: Define the path to the shared folder where the main working directory will be.**
+```{r setting_the_main_directory, cache=TRUE}
+sharedPath <- "/isilon/cfia-ottawa-fallowfield/users/girouxeml/PIRL_working_directory/"
+```
+
+**Define where the analysis path is, or the path to the current project:**
+```{r setting_the_main_directory, cache=TRUE}
+analysisOrtho     <- "Fusarium_Pramorum_species_GenomeAn_IonTorrent_2018/"
+sharedPathAnOrtho <- paste(sharedPath, analysisOrtho, sep="")
+```
+
+**Define path variables to programs and scripts used:**
+```{r}
+# Biocluster system-wide programs:
+bedtoolsPath    <- "/opt/bio/BEDTools/bin/bedtools"
+blastallPath    <- "/opt/bio/ncbi/bin/blastall"
+
+# *** Revisit this organization. Perhaps best that all programs be /home/ and databases be in local cfia-ottawa?
+# CFIA-ACIA users home directory programs:
+progPath        <- "/home/CFIA-ACIA/girouxeml/prog/"
+blastpPath      <- paste(progPath, "miniconda/bin/blastp", sep = "")
+buscoPath       <- paste(progPath, "busco/scripts/run_BUSCO.py", sep = "")
+jbrowseFlatfile2json <- paste(progPath, "jbrowse/JBrowse-1.12.3/bin/flatfile-to-json.pl", sep = "")
+jbrowsePrepRefsSeqsPath <- paste(progPath, "jbrowse/JBrowse-1.12.3/bin/prepare-refseqs.pl", sep = "") 
+scriptsPath     <- paste(progPath, "scripts_pl/", sep = "")
+orthoFinderPath <- paste(progPath, "OrthoFinder-2.2.6/orthofinder", sep = "")
+# CFIA-Ottawa-Fallowfield user directory programs:
+programsPath    <- "/isilon/cfia-ottawa-fallowfield/users/girouxeml/prog/"
+```
+
+**Define paths to reference files used:**  
+```{r}
+referencesPath  <- paste(sharedPath, "References/", sep = "")
+
+pepFuspseuPath   <- paste(referencesPath,"Fuspseu_GCA_000303195.2/Fusarium_pseudograminearum_GCA_000303195.2_FP7_protein.faa", sep = "")
+pepFussolPath   <- paste(referencesPath,"Fussol_GCA_000151355.1/Fusarium_solani_GCA_000151355.1_v2.0_protein.faa", sep = "")
+pepFuspoaPath   <- paste(referencesPath, "Fusarium_poae_FPOA1.0/Fusarium_poae.FPOA1.0.pep.all.fa", sep = "")
+pepFuspoa2Path   <- paste(referencesPath, "Fuspoae_GCA_001675295.1/Fusarium_poae_GCA_001675295.1_FPOA1.0_protein.faa", sep = "")
+pepFusavePath   <- paste(referencesPath, "Fusave_GCA_000769215.1/Fusarium_avenaceum_GCA_000769215.1_Fave_05001_protein.faa", sep = "")
+pepFuslangPath  <- paste(referencesPath, "Fuslang_GCA_001292635.1/Fusarium_langsethiae_GCA_001292635.1_ASM129263v1_protein.faa", sep = "")
+pepFusmangPath <- paste(referencesPath,"Fusmang_GCA_900044065.1/Fusarium_mangiferae_GCA_900044065.1_Genome_assembly_version_1_protein.faa", sep = "")
+pepFusfujPath   <- paste(referencesPath,"Fusfuj_GCA_900096685.1/Fusarium_fujikuroi_GCA_900096685.1_version_1_protein.faa", sep = "")
+pepFusgramPath   <- paste(referencesPath,"Fusgram_GCA_002352725.1/Fusarium_graminearum_GCA_002352725.1_FGRA07_protein.faa", sep = "")
+pepFusoxysPath   <- paste(referencesPath,"Fusoxys_GCA_000271705.2/Fusarium_oxysporum_GCA_000271705.2_FO_Fo47_V1_protein.faa", sep = "")
+pepFusprolPath   <- paste(referencesPath,"Fusprol_GCA_003290285.1/Fusarium_proliferatum_GCA_003290285.1_FPRO05_protein.faa", sep = "")
+pepFusvertPath   <- paste(referencesPath,"Fusvert_GCA_003317015.1/Fusarium_verticilliodes_GCA_003317015.1_ASM331701v1_protein.faa", sep = "")
+```
+I've added the Fustric.proteins.fasta to the directory last used for orthofinder analysis:
+/isilon/cfia-ottawa-fallowfield/users/girouxeml/PIRL_working_directory/Fusarium_Pramorum_species_GenomeAn_IonTorrent_2018/orthofinderAnalysis/proteinsFasta2/Sep05_ProteinsFaAll   
+The other protein fasta files in this directory are:   
+Fus3.fixedNames.fa   
+Fusgram.pep.singleline.fa   
+Fusoxys.pep.singleline.fa   
+Fuspseu.pep.singleline.fa   
+Fusvert.pep.singleline.fa   
+Fusave.pep.singleline.fa   
+Fuslang.pep.singleline.fa   
+Fuspoa.pep.singleline.fa   
+Fussol.pep.singleline.fa   
+Fusfuj.pep.singleline.fa   
+Fusmang.pep.singleline.fa   
+Fusprol.pep.singleline.fa   
+
+Start orthoFinder from scratch on a set of protein fasta files from different species, saved to a directory:
+Note** The protein fasta files must be in single line format such that one line is the header, and the next line is the sequence, with no breaks untile the next header. Use awk (https://stackoverflow.com/questions/15857088/remove-line-breaks-in-a-fasta-file):  
+
+$ awk '!/^>/ { printf "%s", $0; n = "\n" } /^>/ { print n $0; n = "" } END { printf "%s", n }' Fustric.proteins.fasta > Fustric.pep.singleline.fa
+```{r}
+prefix <- "Test_OrthoFinder_withFustric"
+
+orthoAnalysisPath <- paste(sharedPathAn, "orthofinderAnalysis/", sep = "")
+pathProtFasOrtho  <- paste(orthoAnalysisPath, "proteinsFasta2/Sep05_ProteinsFaAll/", sep = "")
+node <- 20
+threadsAnalysis <- 20
+nameResultsDir <- "added_Fustric"
+
+cmd <- paste("cd ", orthoAnalysisPath, " && ", orthoFinderPath,
+             " -t ", node, " -a ", threadsAnalysis, " -M msa ",
+             " -n ", nameResultsDir, 
+             " -f ", pathProtFasOrtho, sep = "")
+cmd
+suffix <- ".sub"; cat(bashDirections); MakeQsubs(cmd, prefix, suffix, node) 
+```
+**To remove the output files after you are done:**
+```{r}
+RemoveQsubTempFiles(sharedPathAn, prefix)
+```
+
+For some reason, specifying nodes in the qsub doesn't end up using more than 1 node, despite directing it to do so.  
+However, running this directly in the directory with the bash files does:  
+
+qsub -pe smp 20 -cwd -S /bin/bash "name of bash file"  
+
+To add a species to orthofinder, without having to re-do all blast, find the working directroy that has the last SpeicesIDs.txt:  
+$ perl -le 'use File::Find; find(sub{-f && $_ =~ /SpeciesIDs.txt$/ && print $File::Find::name}, ".")'  
+   
+If the previous Blast results can't be found, will need to start from scratch:   
+$ ~/prog/OrthoFinder-2.2.6/orthofinder -f . -t 20 -a 20 -M msa   
+
+If you want to continue a run that crashed after Starting OF Orthologues began:   
+$ ~/prog/OrthoFinder-2.2.6/orthofinder -ft Orthologues_Sep04 -t 8 -M msa   
+*where "-ft DIRECTORY_NAME" where DIRECTORY_NAME is something like the directory containing the 
+directories "Gene_Trees", "Orthologues" etc. (e.g. "ExampleDataset/Results_Jul30/Orthologues_Jul30/").   
+
+  
+Will need to retrieve the genes, not the proteins. For marker development we will be testing on DNA, not RNA, and primers
+designed across intron/exon boundaries need to be avoided. 
+
+Using Hai's orthofinder pipeline. Use genbank_to_fasta on the genbank .gbf files:  
+Retrive the genes for Fustric from the gbf file:
+$ ~/prog/genbank_to_fasta/genbank_to_fasta_v1.2/genbank_to_fasta.py -i ../../../Fusarium_tricinctum/Fustric_RepeatDB/postMakerProcessing/Fustric.gbf -s nt -f gene -d pipe -q 'locus_tag'
+
+Must change the fasta gene names so that they have the _T instead of _G in the name, so that it matches the orthofinder results.
+$ sed -i 's/_G/_T/g' Fustric.gene.fa
+
+Convert the gene fasta file to single-line format:
+$ awk '!/^>/ { printf "%s", $0; n = "\n" } /^>/ { print n $0; n = "" } END { printf "%s", n }' Fustric.gene.fa > Fustric.singleline.fa 
+
+Append the Fustric.singleline.fa to the all_nt.fasta from the the previous Fusarium species.
+$ cat Fustric.singleline.fa >> all_nt.fasta
+
+Copy the all_nt.fasta to the references directory in Hai's pipeline. 
+$ cp ../../../genefastasingleline/all_nt.fasta references/
+
+Make sure to copy the Orthogroup.txt and SingleCopyOrthogroups.txt into the 1_grep directory.
+These files are generated after you run OrthoFinder.
+cd into the 1_grep directory and run the following:
+$ bash extract_single_copy_orthogroups_headers.sh
+
+Continue on as follows:
+$ mv Orthogroups.SingleCopyOrthogroups.txt ../2_extract_list & cd ../2_extract_list
+
+$ python extract_list.py Orthogroups.SingleCopyOrthogroups.txt
+$ mv *OG* ../3_mass_filter_by_name & cd ../3_mass_filter_by_name
+
+$ python mass_filter_by_name.py
+$ mv *.txt.fasta ../4_mass_align & cd ../4_mass_align
+
+& python mass_align_muscle_mac_version.py # change this to the linux version of the script if you are running on a linux OS
+$ mv *.txt.fasta.muscle.fasta ../5_clean_extensions
+$ cd ../5_clean_extensions
+
+$ bash clean_extensions.sh
+
+$ mv *.fasta ../6_get_stats & cd ../6_get_stats
+$ python AMAS.py summary -f fasta -d dna -i *fasta # from https://github.com/marekborowiec/AMAS
+#import summary.txt generated from AMAS.py into excel and sort as needed
+
+
+
+$ for file in ./L*.gbf  
+> do 
+> ~/prog/genbank_to_fasta/genbank_to_fasta_v1.2/genbank_to_fasta.py -i "$file" -m genbank -s nt -f CDS -d pipe -q 'locus_tag'
+> done
+
+
+
+
+
