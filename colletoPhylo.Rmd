@@ -9,7 +9,14 @@ urlcolor: blue
 header-includes: \usepackage{xcolor}
 ---
 
-
+## __Colletotrichum Phylogenomics Analysis__  
+  
+#### __*Project Name Setting*__
+```{r}
+analysis <- "Colletotrichum_phylogeny"
+```
+  
+#### __*Set up the project's global options*__  
 ```{r, global_options, eval=TRUE, echo=FALSE, cache=TRUE}
 library(knitr)
 opts_chunk$set(tidy.opts=list(width.cutoff=80), tidy = TRUE, fig.align='center',
@@ -17,47 +24,40 @@ opts_chunk$set(tidy.opts=list(width.cutoff=80), tidy = TRUE, fig.align='center',
                message=FALSE, quietly=TRUE, results='hide', warn.conflicts=FALSE, 
                warning=FALSE)
 ```
-Project Name Setting:
-```{r}
-analysis <- "Colletotrichum_phylogeny"
-```
-
-Source our custom R scripts:    
-For this we will use the rprojroot package to set the directory structures. This will help us when finding our files to source functions. We specify ours is an RStudio project. The root object contains a function that will help us locate our package R files regardless of our current working directory.
+  
+#### __*Project directory set-up*__  
+Use the rprojroot package to set the directory structures and create directories    
+that will be used throughout the script. The root object contains a function that    
+will help us locate our package R files regardless of our current working directory.
 ```{r sourcing_my_functions, echo=FALSE, eval=TRUE, include=FALSE, cache=TRUE}
 library("rprojroot")
 root <- rprojroot::is_rstudio_project
 
+# Capture, or create if not yet there, directory for misc. R script files:
 scriptsPath <- root$make_fix_file(".")("R")
 scripts  <- dir(root$find_file("R", path = root$find_file()))
 scriptsList <- paste(scriptsPath, scripts, sep = "//")
 lapply(scriptsList, source)
 
+# Capture, or create if not yet there, directory for misc. Python script files:
 scriptsPyPath <- root$make_fix_file(".")("pythonScripts")
 dir.create(scriptsPyPath, showWarnings = TRUE, recursive = TRUE)
 scriptsPy <- dir(root$find_file(scriptsPyPath, path = root$find_file()))
 scriptsPyList <- paste(scriptsPyPath, scriptsPy, sep = "//")
 
-imagePath <- root$make_fix_file(".")(paste("r_environments", analysis, sep = "/"))
-dir.create(imagePath, showWarnings = TRUE, recursive = TRUE)
-images <- dir(root$find_file(imagePath, path = root$find_file())) # if there is already a data file in this directory if not running this for the first time
-imagesList <- paste(imagePath, images, sep = "//")
-load(paste(imagesList, sep = "/")) # you need to bget more specific if you have more than one image saved in this directory
-```
-
-Record the path to the environment images directory:
-```{r importChptImage, echo=TRUE, eval=TRUE, include=FALSE, cache=TRUE}
-library("rprojroot")
+# Create a directory for results and outputs - I call this the working directory:
 sharedPath <- root$make_fix_file(".")("PIRL_working_directory")
 dir.create(sharedPath, showWarnings = TRUE, recursive = TRUE)
 sharedPathDirs <- dir(root$find_file(sharedPath, path = root$find_file()))
 sharedPathAn <- paste(sharedPath, analysis, sep = "/")
 dir.create(sharedPathAn, showWarnings = TRUE, recursive = TRUE)
 
+# Create directory for genome databases:
 databasePath <- root$make_fix_file(".")(paste("Databases", analysis, sep = "/"))
 dir.create(databasePath, showWarnings = TRUE, recursive = TRUE)
 databasesPathDir <- dir(root$find_file(databasePath, path = root$find_file()))
 
+# Create separate database sub-directories for RefSeq, GenBank and Ensembl:
 refSeqDB <- paste(databasePath, "refSeq", sep = "/")
 gbDB <- paste(databasePath, "genbank", sep = "/")
 ensemblDB <- paste(databasePath, "ensembl", sep = "/")
@@ -66,7 +66,9 @@ for (j in 1:length(subfolder_names)){
   folder <- dir.create(paste0(databasePath, subfolder_names[j]), showWarnings = TRUE, recursive = FALSE)
 }
 
-# species within genus genomes 
+# Create separate database directories for genomes of species outside main 
+# targets set, i.e., outgroups or other species within genus to improve phylogeny
+# tree resolution: 
 generaGenomes <- paste(databasePath, "all_genomes_under_target_genera", sep = "/")
 refSeqDBGenus <- paste(generaGenomes, "refSeq", sep = "/")
 gbDBGenus <- paste(generaGenomes, "genbank", sep = "/")
@@ -74,36 +76,64 @@ ensemblDBGenus <- paste(generaGenomes, "ensembl", sep = "/")
 for (j in 1:length(subfolder_names)){
   folder <- dir.create(paste0(generaGenomes, subfolder_names[j]), showWarnings = TRUE, recursive = TRUE)
 }
-```
 
+# Create a directory to hold all the saved environment files:
+imagePath <- root$make_fix_file(".")(paste("r_environments", analysis, sep = "/"))
+dir.create(imagePath, showWarnings = TRUE, recursive = TRUE)
+images <- dir(root$find_file(imagePath, path = root$find_file())) # if there is already a data file in this directory if not running this for the first time
+imagesList <- paste(imagePath, images, sep = "//")
+load(paste(imagesList, sep = "/")) # Need to be specific if multiple images are present.
+```
+  
+#### __*Project environment quick-load*__  
 ```{r}
+library("rprojroot")
+root <- rprojroot::is_rstudio_project
+imagePath <- root$make_fix_file(".")(paste("r_environments", analysis, sep = "/"))
 imageA <- "colleto_phylo.RData" # should provide this variable in initial chunk where image directory is specified - but concern is that there may be the need to divide and create different files within the same anaylsis....
 save.image(paste(imagePath, imageA, sep = "/")) # you need to bget more specific if you have more than one image saved in this directory
 ```
-
-Steps:    
-1. acquire 9 genomes of our strains - or set path to these, maybe also have a table    
-2. extend outwards to other colletotrichum species genomes, using curated reference genomes from refseq    
-3. create phylogeny from all the availabe genomes gathered    
-
-Import csv that has our reference genomes directory paths and shortnames:
+  
+### Project Steps:  
+#### 1. Core project genomic information. Collect file location information for our primary 9 genomes.  
+#### 2. Extend genome data to include other Colletotrichum species, using curated reference genomes from RefSeq.  
+#### 4. If more genomic data is required, consider non-RefSeq data.  
+#### 3. Create phylogeny from all the available genomes gathered.     
+  
+#### __Step 1__  
+  
+__*Collect paths to our personally-sequenced Colletotrichum genomes:*__  
+Import csv that has our reference genomes directory paths and shortnames.
 ```{r}
 sequencedColletoGenomes <- read.csv(file = root$find_file("metadata_colletoMar2022.csv", path = root$find_file()))
 ```
-
-Reference genomes to obtain for target species:
+  
+#### __Step 2__  
+#####__Search for other quality Colletotrichum reference genomes available__  
+__*a)*__ Use nearest_genomes.py script to gather species taxIDs. First need to get TaxIDs
+of Colletotrichum species that have sequenced genomes. To get these, use the genus
+TaxID as a starting point and then use the nearest_genomes python script to retrieve species TaxIDs.
+  
+__*b)*__ Use the species taxID information to gather additional information related to
+genomic data, i.e., assembly and accession info for genome data retrieval.  
+  
+__*c)*__ Use the accessions or assembly IDs to retrieve genomic data using biomartr to retrieve data from on NCBI, RefSeq and Ensembl.  
+  
+  
+__*Capture the Colletotrichum genus TaxID:*__
 ```{r}
 target <- "5455" # genus tax-id for Colletotrichum
 ```
-
-Try to collect all available Colletotrichum genomes, for all species under the Colletotrichum genus. Need to first use the genus TaxID to find the TaxIDs of all the available species.    
-Prepare for function "nearest_genomes.py":    
+  
+__*Prepare for function "nearest_genomes.py":*__  
+**Unlike the APS project, we don't have a list from a table to go through, but I made it like this in case an outgroup genus is to be added later.**
 ```{r}
 library("data.table")
-generaList <- c("Colletotrichum") # unlike the APS project, we don't have a list from a table to go through, but I made it like this in case an outgroup genus is to be added later.
+generaList <- c("Colletotrichum") 
 nearestGensTbl <- as.data.table(generaList)
 ```
-
+  
+__*Customize the nearest_genomes.py script to search using our target genus*__  
 ```{r}
 library("reticulate")
 nearestGenPyPath <- paste(scriptsPyPath, scriptsPy, sep = "//")
@@ -118,7 +148,8 @@ for(i in 1:nrow(nearestGensTbl)){
 nearestGensTbl <- nearestGensTbl[, .(accns = unlist(tstrsplit(accns, ",", type.convert = TRUE))), by = generaList]
 nearestGensTbl$accns <- sub(" ", "", nearestGensTbl$accns)
 ```
-
+  
+__*Save the environemnt image:*__
 ```{r}
 save.image(paste(imagePath, imageA, sep = "/"))
 ```
