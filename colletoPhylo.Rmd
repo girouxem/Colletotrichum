@@ -19,7 +19,7 @@ header-includes: \usepackage{xcolor}
 ```{r, global_options, eval=TRUE, cache=TRUE}
 library("knitr")
 opts_chunk$set(tidy.opts=list(width.cutoff=80), tidy = TRUE, fig.align='center',
-               cache=TRUE, collapse=TRUE, echo=TRUE, eval=FALSE, include=FALSE,
+               cache=TRUE, collapse=TRUE, eval=FALSE, include=FALSE,
                message=FALSE, quietly=TRUE, results='hide', warn.conflicts=FALSE, 
                warning=FALSE)
 ```
@@ -27,7 +27,7 @@ opts_chunk$set(tidy.opts=list(width.cutoff=80), tidy = TRUE, fig.align='center',
 <br>  
   
 ##### __Project Name Setting__
-```{r, eval=FALSE, echo=1}
+```{r, eval=FALSE, echo=TRUE, tidy = TRUE}
 analysis <- "Colletotrichum_phylogeny"
 ```
   
@@ -36,7 +36,7 @@ analysis <- "Colletotrichum_phylogeny"
   
 ##### __Project directory set-up__  
 Use the rprojroot package to set the directory structures and create directories that will be used throughout the script. The root object contains a function that will help us locate our package R files regardless of our current working directory.
-```{r, echo=1, eval=FALSE}
+```{r, echo=1, eval=FALSE, tidy = TRUE}
 library("rprojroot")
 root <- rprojroot::is_rstudio_project
 
@@ -93,7 +93,7 @@ load(paste(imagesList, sep = "/")) # Need to be specific if multiple images are 
 <br>  
   
 ##### __Project environment quick-load__  
-```{r, echo=TRUE, eval=FALSE}
+```{r, echo=TRUE, eval=FALSE, tidy = TRUE}
 library("rprojroot")
 root <- rprojroot::is_rstudio_project
 imagePath <- root$make_fix_file(".")(paste("r_environments", analysis, sep = "/"))
@@ -115,7 +115,7 @@ load(paste(imagePath, imageA, sep = "/")) # you need to bget more specific if yo
   
 __Collect paths to our personally-sequenced Colletotrichum genomes:__  
 Import csv that has our reference genomes directory paths and shortnames.
-```{r, echo=TRUE, eval=FALSE}
+```{r, echo=TRUE, eval=FALSE, tidy = TRUE}
 sequencedColletoGenomes <- read.csv(file = root$find_file("metadata_colletoMar2022.csv", path = root$find_file()))
 ```
       
@@ -139,13 +139,13 @@ __2.3__ Use the accessions or assembly IDs to retrieve genomic data using biomar
 ##### __2.1 Gather Colletotrichum Species TaxIDs:__  
   
 __Capture the Colletotrichum genus TaxID:__
-```{r, eval=FALSE, echo=TRUE}
+```{r, eval=FALSE, echo=TRUE, tidy = TRUE}
 target <- "5455" # genus tax-id for Colletotrichum
 ```
   
 __Prepare for function "nearest_genomes.py":__  
 *Note: Unlike the APS project, we don't have a list from a table to go through, but I made it like this in case an outgroup genus is to be added later.*
-```{r, echo=TRUE, eval=FALSE}
+```{r, echo=TRUE, eval=FALSE, tidy = TRUE}
 library("data.table")
 generaList <- c("Colletotrichum") 
 nearestGensTbl <- as.data.table(generaList)
@@ -154,13 +154,13 @@ nearestGensTbl <- as.data.table(generaList)
 __Customize the nearest_genomes.py script to search using our target genus__
   
 *At line 84 in nearest_genomes.py, replace "Aleurina" with the genus you want to seach, then __save it__:*
-```{r, echo=TRUE, eval=FALSE}
+```{r, echo=TRUE, eval=FALSE, tidy = TRUE}
 nearestGenPyPath <- paste(scriptsPyPath, scriptsPy, sep = "//")
 file.edit(nearestGenPyPath) # File will open in source pane where you can edit then save it.
 ```
   
 __Load the reticulate package to manipulate python code and use the nearest_genomes script:__
-```{r, echo=TRUE, eval=FALSE}
+```{r, echo=TRUE, eval=FALSE, tidy = TRUE}
 library("reticulate")
 source_python(nearestGenPyPath)
 
@@ -180,14 +180,14 @@ We'll use the package "biomartr" to retrieve genomic data from a couple of onlin
 <br>  
   
 __Display all databases accessible to biomartr:__
-```{r, echo=TRUE, eval=FALSE}
+```{r, echo=TRUE, eval=FALSE, tidy = TRUE}
 library("biomartr")
 biomartr::listNCBIDatabases(db = "all")
 # also try BarcodingR: https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.12682
 ```
   
 __Query the RefSeq, GenBank and EMBL databases for genome assembly availabilities:__
-```{r, echo=TRUE, eval=FALSE}
+```{r, echo=TRUE, eval=FALSE, tidy = TRUE}
 library("biomartr")
 # set default timeout setting from 60s to at least 3000000 s before running any retrieval functions:
 options(timeout = 30000000)
@@ -202,7 +202,7 @@ for(i in 1:nrow(nearestGensTbl)){
 }
 ```
 __Prepare tables to fetch genomes:__  
-```{r}
+```{r, echo=TRUE, eval=FALSE, tidy = TRUE}
 library("data.table")
 gbGens <- nearestGensTbl[nearestGensTbl$genDB == "TRUE",]
 ensemblGens <- nearestGensTbl[nearestGensTbl$genEMBL == "TRUE",]
@@ -211,15 +211,15 @@ refSeqGens <- nearestGensTbl[nearestGensTbl$genRefSeq == "TRUE",]
 
 __Fetch available genomes from GenBank, RefSeq and EMBL__  
 *Note: Run as background job.*  
-```{r, echo=TRUE, eval=FALSE}
+*To-do:  Set this up as a qsub as well, this will avoid interruptions if computer enters sleep mode.*  
+```{r, echo=TRUE, eval=FALSE, tidy = TRUE}
 library("biomartr")
 
 # GenBank genomes:
 options(timeout = 30000000)
 for(i in 1:nrow(gbGens)){
   biomartr::getGenomeSet(db = "genbank", gbGens$accns[i], reference = FALSE, release = NULL,
-                         clean_retrieval = TRUE, gunzip = FALSE, update = FALSE, path = gbDBGenus,
-                         assembly_type = "toplevel")
+                         clean_retrieval = TRUE, gunzip = FALSE, update = FALSE, path = gbDBGenus)
   biomartr::getAssemblyStats(db = "genbank", gbGens$accns[i], reference = FALSE, 
                              type = "download", path = gbDBGenus)
   warnings()
@@ -230,8 +230,7 @@ save.image(paste(imagePath, imageA, sep = "/"))
 options(timeout = 30000000)
 for(i in 1:nrow(refSeqGens)){
   biomartr::getGenomeSet(db = "refseq", refSeqGens$accns[i], reference = FALSE, release = NULL,
-                         clean_retrieval = TRUE, gunzip = FALSE, update = FALSE, path = refSeqDBGenus,
-                         assembly_type = "toplevel")
+                         clean_retrieval = TRUE, gunzip = FALSE, update = FALSE, path = refSeqDBGenus)
   biomartr::getAssemblyStats(db = "refseq", refSeqGens$accns[i], reference = FALSE, 
                              type = "download", path = refSeqDBGenus)
   warnings()
@@ -251,13 +250,13 @@ for(i in 1:nrow(gbGens)){
 save.image(paste(imagePath, imageA, sep = "/"))
 ```
 
-Reload the R environment since the last time it was saved it was via terminal as a background job:
-```{r, echo=TRUE, eval=FALSE}
+__Reload the R environment since the last time it was saved it was via terminal as a background job:__
+```{r, echo=TRUE, eval=FALSE, tidy = TRUE}
 load(paste(imagePath, imageA, sep = "/"))
 ```
 
-### Over here!!!! 21Feb2023 - above failed to retrieve genomes in list under genus - need to see what is going on with the fucking code.
-```{r, echo=FALSE, eval=FALSE}
+Over here!!!! 22Feb2023 - incomplete genome data retrieval - need to re-run job above. Note that it won't take as much time becuse it doesn't re-download already successfully retrieved genomes because we set update = FALSE.
+```{r, echo=FALSE, eval=FALSE, tidy = TRUE}
 for(i in 1:nrow(targetMeta)){
   res <- biomartr::is.genome.available(db = "genbank", organism = targetMeta$SpeciesName[i])
   targetMeta$genDB[i] <- res
@@ -282,14 +281,14 @@ for(i in 1:nrow(gbGens)){
 ```
 
 
-```{r, echo=FALSE, eval=FALSE}
+```{r, echo=FALSE, eval=FALSE, tidy = TRUE}
 # Save the environment image:
 save.image(paste(imagePath, imageA, sep = "/"))
 ```
 
 
 Obtain genomes from all species within a genus available from database:
-```{r, echo=TRUE, eval=FALSE}
+```{r, echo=TRUE, eval=FALSE, tidy = TRUE}
 getKingdoms(db = "refseq")
 getGroups(db = "refseq", kingdom = "fungi")
 ```
@@ -307,7 +306,7 @@ getGroups(db = "refseq", kingdom = "fungi")
 
 
 Need to obtain reference genomes for the target pathogens in the target Meta table:
-```{r, echo=TRUE, eval=FALSE}
+```{r, echo=TRUE, eval=FALSE, tidy = TRUE}
 library("biomartr")
 # set default timeout setting from 60s to at least 3000000 s before running any retrieval functions:
 options(timeout = 30000000)
@@ -317,20 +316,20 @@ biomartr::listNCBIDatabases(db = "all")
 ```
 
 RefSeq Genome Check:
-```{r, echo=TRUE, eval=FALSE}
+```{r, echo=TRUE, eval=FALSE, tidy = TRUE}
 library("biomartr")
 res <- biomartr::is.genome.available(db = "refseq", organism = "Colletotrichum", details = TRUE)
 # notice that the last 3 rows/entries are not from Colletotrichum genus, rather they are viral, so remove these from the table:
 res <- res[1:14,]
 ```
 
-```{r, echo=FALSE, eval=FALSE}
+```{r, echo=FALSE, eval=FALSE, tidy = TRUE}
 # Save the environment image:
 save.image(paste(imagePath, imageA, sep = "/"))
 ```
 
 
-```{r, echo=TRUE, eval=FALSE}
+```{r, echo=TRUE, eval=FALSE, tidy = TRUE}
 # targetMeta$genRefSeq[i] <- res
 refSeqGens <- res
 refSeqGens$genRefSeq <- "TRUE"
@@ -341,7 +340,7 @@ for(i in 1:nrow(refSeqGens)){
 }
 ```
 RefSeq Genome Download of most recent version. Set up as a background job (Don't copy results - just double-check download folder has all genomes downloaded):
-```{r, echo=TRUE, eval=FALSE}
+```{r, echo=TRUE, eval=FALSE, tidy = TRUE}
 options(timeout = 300000000)
 library("biomartr")
 for(i in 1:nrow(refSeqGens)){
@@ -357,26 +356,26 @@ for(i in 1:nrow(refSeqGens)){
 ```
 
 
-```{r, echo=FALSE, eval=FALSE}
+```{r, echo=FALSE, eval=FALSE, tidy = TRUE}
 # Save the environment image:
 save.image(paste(imagePath, imageA, sep = "/"))
 ```
 
 GenBank Genome Check:
-```{r, echo=TRUE, eval=FALSE}
+```{r, echo=TRUE, eval=FALSE, tidy = TRUE}
 library("biomartr")
 res <- biomartr::is.genome.available(db = "genbank", organism = "5455", details = TRUE)
 # notice that the last 3 rows/entries are not from Colletotrichum genus, rather they are viral, so remove these from the table:
 #res <- res[1:14,]
 ```
 
-```{r, echo=FALSE, eval=FALSE}
+```{r, echo=FALSE, eval=FALSE, tidy = TRUE}
 # Save the environment image:
 save.image(paste(imagePath, imageA, sep = "/"))
 ```
 
 
-```{r, echo=TRUE, eval=FALSE}
+```{r, echo=TRUE, eval=FALSE, tidy = TRUE}
 # targetMeta$genRefSeq[i] <- res
 refSeqGens <- res
 refSeqGens$genRefSeq <- "TRUE"
@@ -387,7 +386,7 @@ for(i in 1:nrow(refSeqGens)){
 }
 ```
 RefSeq Genome Download of most recent version. Set up as a background job (Don't copy results - just double-check download folder has all genomes downloaded):
-```{r, echo=TRUE, eval=FALSE}
+```{r, echo=TRUE, eval=FALSE, tidy = TRUE}
 options(timeout = 300000000)
 library("biomartr")
 for(i in 1:nrow(refSeqGens)){
@@ -403,13 +402,13 @@ for(i in 1:nrow(refSeqGens)){
 ```
 
 
-```{r, echo=FALSE, eval=FALSE}
+```{r, echo=FALSE, eval=FALSE, tidy = TRUE}
 # Save the environment image:
 save.image(paste(imagePath, imageA, sep = "/"))
 ```
 
 Look at CAZyme distributions
-```{r, echo=TRUE, eval=FALSE}
+```{r, echo=TRUE, eval=FALSE, tidy = TRUE}
 install.packages("readxl")
 library("readxl")
 cazyTblPath <- "/isilon/cfia-ottawa-fallowfield/users/girouxeml/PIRL_working_directory/Colletotrichum_phylogeny/CAZyme_prediction_result.xlsx"
@@ -421,7 +420,7 @@ cazyXLS <- read_excel(cazyTblPath)
 
 
 __*Save the environment image:*__
-```{r, echo=TRUE, eval=FALSE}
+```{r, echo=TRUE, eval=FALSE, tidy = TRUE}
 save.image(paste(imagePath, imageA, sep = "/"))
 ```
 
